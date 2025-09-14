@@ -15,12 +15,18 @@ chalkMock = {
   yellow: jest.fn((msg: any) => `[yellow]${msg}`),
   red: jest.fn((msg: any) => `[red]${msg}`),
 };
-await jest.unstable_mockModule('@modelcontextprotocol/sdk/server/index.js', () => ({
-  Server: ServerMock,
-}));
-await jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: StdioServerTransportMock,
-}));
+await jest.unstable_mockModule(
+  '@modelcontextprotocol/sdk/server/index.js',
+  () => ({
+    Server: ServerMock,
+  })
+);
+await jest.unstable_mockModule(
+  '@modelcontextprotocol/sdk/server/stdio.js',
+  () => ({
+    StdioServerTransport: StdioServerTransportMock,
+  })
+);
 await jest.unstable_mockModule('chalk', () => ({
   default: chalkMock,
 }));
@@ -80,9 +86,16 @@ describe('CodexMcpServer', () => {
       expect(ServerMock).toHaveBeenCalled();
       expect(StdioServerTransportMock).toHaveBeenCalled();
       expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-      expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      expect(chalkMock.green).toHaveBeenCalledWith('codex-mcp-server started successfully');
-      expect(console.error).toHaveBeenCalledWith('[green]codex-mcp-server started successfully');
+      expect(processOnSpy).toHaveBeenCalledWith(
+        'SIGTERM',
+        expect.any(Function)
+      );
+      expect(chalkMock.green).toHaveBeenCalledWith(
+        'codex-mcp-server started successfully'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '[green]codex-mcp-server started successfully'
+      );
     });
 
     it('should handle shutdown signal and close server', async () => {
@@ -91,10 +104,16 @@ describe('CodexMcpServer', () => {
       const server = new CodexMcpServer(config);
       await server.start();
       // Find the shutdown handler
-      const shutdownHandler = processOnSpy.mock.calls.find(([signal]) => signal === 'SIGINT')[1];
+      const shutdownHandler = processOnSpy.mock.calls.find(
+        ([signal]) => signal === 'SIGINT'
+      )[1];
       await shutdownHandler('SIGINT');
-      expect(chalkMock.yellow).toHaveBeenCalledWith('Received SIGINT, shutting down MCP server...');
-      expect(console.error).toHaveBeenCalledWith('[yellow]Received SIGINT, shutting down MCP server...');
+      expect(chalkMock.yellow).toHaveBeenCalledWith(
+        'Received SIGINT, shutting down MCP server...'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '[yellow]Received SIGINT, shutting down MCP server...'
+      );
       // close() should be called
       const instance = ServerMock.mock.results[0].value;
       expect(instance.close).toHaveBeenCalled();
@@ -111,10 +130,15 @@ describe('CodexMcpServer', () => {
       const instance = ServerMock.mock.results[0].value;
       instance.close.mockRejectedValueOnce(new Error('fail'));
       await server.start();
-      const shutdownHandler = processOnSpy.mock.calls.find(([signal]) => signal === 'SIGINT')[1];
+      const shutdownHandler = processOnSpy.mock.calls.find(
+        ([signal]) => signal === 'SIGINT'
+      )[1];
       await shutdownHandler('SIGINT');
       expect(chalkMock.red).toHaveBeenCalledWith('Error during shutdown:');
-      expect(console.error).toHaveBeenCalledWith('[red]Error during shutdown:', expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        '[red]Error during shutdown:',
+        expect.any(Error)
+      );
       jest.runAllTimers(); // Flush setTimeout
       expect(processExitSpy).toHaveBeenCalledWith(0);
     });
@@ -124,10 +148,14 @@ describe('CodexMcpServer', () => {
       const config = { name: 'codex-mcp-server', version: '0.1.0' };
       const server = new CodexMcpServer(config);
       // The second call to setRequestHandler is for CallToolRequestSchema
-      const setHandlerCalls = ServerMock.mock.results[0].value.setRequestHandler.mock.calls;
+      const setHandlerCalls =
+        ServerMock.mock.results[0].value.setRequestHandler.mock.calls;
       const callToolHandler = setHandlerCalls[1]?.[1];
-      if (!callToolHandler) throw new Error('CallToolRequestSchema handler not found');
-      const response = await callToolHandler({ params: { name: 'INVALID', arguments: {} } });
+      if (!callToolHandler)
+        throw new Error('CallToolRequestSchema handler not found');
+      const response = await callToolHandler({
+        params: { name: 'INVALID', arguments: {} },
+      });
       expect(response.isError).toBe(true);
       expect(response.content[0].text).toContain('Unknown tool: INVALID');
     });
@@ -139,12 +167,18 @@ describe('CodexMcpServer', () => {
       const server = new CodexMcpServer(config);
       // Patch the CODEX handler to throw
       const handlers = (await import('../tools/handlers.js')).toolHandlers;
-      jest.spyOn(handlers.codex, 'execute').mockRejectedValue(new Error('fail'));
+      jest
+        .spyOn(handlers.codex, 'execute')
+        .mockRejectedValue(new Error('fail'));
       // The second call to setRequestHandler is for CallToolRequestSchema
-      const setHandlerCalls = ServerMock.mock.results[0].value.setRequestHandler.mock.calls;
+      const setHandlerCalls =
+        ServerMock.mock.results[0].value.setRequestHandler.mock.calls;
       const callToolHandler = setHandlerCalls[1]?.[1];
-      if (!callToolHandler) throw new Error('CallToolRequestSchema handler not found');
-      const response = await callToolHandler({ params: { name: 'codex', arguments: { prompt: 'foo' } } });
+      if (!callToolHandler)
+        throw new Error('CallToolRequestSchema handler not found');
+      const response = await callToolHandler({
+        params: { name: 'codex', arguments: { prompt: 'foo' } },
+      });
       expect(response.isError).toBe(true);
       expect(response.content[0].text).toContain('fail');
     });
