@@ -2,12 +2,19 @@ import { z } from 'zod';
 
 // Tool constants
 export const TOOLS = {
+  LIST_TOOLS: 'listTools',
   CODEX: 'codex',
   LIST_SESSIONS: 'listSessions',
   PING: 'ping',
   HELP: 'help',
+  LIST_MODELS: 'listModels',
+  DELETE_SESSION: 'deleteSession',
+  SESSION_STATS: 'sessionStats',
+  RESUME: 'resume',
 } as const;
 
+export const ListToolsToolSchema = z.object({});
+export type ListToolsToolArgs = z.infer<typeof ListToolsToolSchema>;
 export type ToolName = (typeof TOOLS)[keyof typeof TOOLS];
 
 // Tool definition interface
@@ -42,6 +49,7 @@ export const CodexToolSchema = z.object({
   pageToken: z.string().optional(),
   sessionId: z.string().optional(),
   resetSession: z.boolean().optional(),
+  model: z.string().optional(), // Optional model selection
 });
 
 export const ListSessionsToolSchema = z.object({});

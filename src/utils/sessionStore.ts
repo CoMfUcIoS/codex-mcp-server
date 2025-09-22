@@ -1,5 +1,11 @@
 type Turn = { role: 'user' | 'assistant'; text: string; at: number };
-type Session = { turns: Turn[]; bytes: number; expiresAt: number };
+type Session = {
+  turns: Turn[];
+  bytes: number;
+  expiresAt: number;
+  createdAt: number;
+  lastUsedAt: number;
+};
 
 import { Buffer } from 'buffer';
 const SESSIONS = new Map<string, Session>();
@@ -25,13 +31,15 @@ export function appendTurn(
   role: 'user' | 'assistant',
   text: string
 ) {
-  gc();
+  const now = Date.now();
   const existing = SESSIONS.get(sessionId) ?? {
     turns: [],
     bytes: 0,
     expiresAt: 0,
+    createdAt: now,
+    lastUsedAt: now,
   };
-  const turns = [...existing.turns, { role, text, at: Date.now() }];
+  const turns = [...existing.turns, { role, text, at: now }];
   let bytes = existing.bytes + Buffer.byteLength(text, 'utf8');
   let idx = 0;
   // Trim from the oldest until within MAX_BYTES
@@ -42,7 +50,9 @@ export function appendTurn(
   const next: Session = {
     turns: turns.slice(idx),
     bytes,
-    expiresAt: Date.now() + TTL_MS,
+    expiresAt: now + TTL_MS,
+    createdAt: existing.createdAt,
+    lastUsedAt: now,
   };
   SESSIONS.set(sessionId, next);
 }
@@ -60,4 +70,23 @@ export function clearSession(sessionId: string): void {
 export function listSessionIds(): string[] {
   gc();
   return Array.from(SESSIONS.keys());
+}
+
+export function getSessionMeta(sessionId: string) {
+  gc();
+  const s = SESSIONS.get(sessionId);
+  if (!s) return undefined;
+  return {
+    sessionId,
+    createdAt: s.createdAt,
+    lastUsedAt: s.lastUsedAt,
+    expiresAt: s.expiresAt,
+    bytes: s.bytes,
+    turns: s.turns.length,
+  };
+}
+
+export function listSessionMeta() {
+  gc();
+  return Array.from(SESSIONS.keys()).map(getSessionMeta).filter(Boolean);
 }

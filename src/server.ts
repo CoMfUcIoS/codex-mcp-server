@@ -50,14 +50,16 @@ export class CodexMcpServer {
           }
           const handler = toolHandlers[name];
           // Ensure the return value matches the expected type
-          const result = await handler.execute(args);
+          // If args is undefined, provide an empty object
+          const safeArgs = args ?? {};
+          const result = await handler.execute(safeArgs);
           return { ...result };
         } catch (error) {
           return {
             content: [
               {
                 type: 'text',
-                text: handleError(error, `tool "${name}"`),
+                text: handleError(error, `tool \"${name}\"`),
               },
             ],
             isError: true,

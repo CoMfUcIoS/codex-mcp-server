@@ -33,7 +33,8 @@ await jest.unstable_mockModule('chalk', () => ({
 
 describe('CodexMcpServer', () => {
   it('should instantiate with config', async () => {
-    const { CodexMcpServer } = await import('../server');
+    // Use static import for CodexMcpServer
+    const { CodexMcpServer } = await import('../server.js');
     const config = { name: 'test', version: '1.0.0' };
     const server = new CodexMcpServer(config);
     expect(server).toBeInstanceOf(CodexMcpServer);

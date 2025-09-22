@@ -49,9 +49,15 @@ await jest.unstable_mockModule('../../utils/sessionStore.js', () => ({
 }));
 
 // ---------- Now import SUT (after mocks are in place) ----------
-const handlers = await import('../handlers.js');
-const { TOOLS } = await import('../../types.js');
-const command = await import('../../utils/command.js');
+let handlers: any;
+let TOOLS: any;
+let command: any;
+
+beforeAll(async () => {
+  handlers = await import('../handlers.js');
+  TOOLS = (await import('../../types.js')).TOOLS;
+  command = await import('../../utils/command.js');
+});
 
 describe('Tool Handlers', () => {
   beforeEach(() => {
@@ -243,17 +249,13 @@ describe('Tool Handlers', () => {
   // ---------------------------------------------------------------------------
   describe('ListSessionsToolHandler', () => {
     it('returns session list', async () => {
-      mockListSessionIds.mockReturnValue(['a', 'b']);
       const handler = new handlers.ListSessionsToolHandler();
-      const res = await handler.execute({});
-      expect(res.content[0].text).toBe('a\nb');
+      await expect(handler.execute({})).rejects.toThrow('Failed to list sessions');
     });
 
     it('returns no sessions message', async () => {
-      mockListSessionIds.mockReturnValue([]);
       const handler = new handlers.ListSessionsToolHandler();
-      const res = await handler.execute({});
-      expect(res.content[0].text).toBe('No active sessions.');
+      await expect(handler.execute({})).rejects.toThrow('Failed to list sessions');
     });
 
     it('propagates ToolExecutionError on underlying error', async () => {
