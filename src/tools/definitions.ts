@@ -3,7 +3,8 @@ import { TOOLS, type ToolDefinition } from '../types.js';
 export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.LIST_TOOLS,
-    description: 'List all available tools and their schemas for client introspection.',
+    description:
+      'List all available tools and their schemas for client introspection.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -56,6 +57,30 @@ export const toolDefinitions: ToolDefinition[] = [
           type: 'string',
           description:
             'Model name for Codex CLI. If omitted, the server will intelligently select a model based on the prompt.',
+        },
+        image: {
+          type: ['string', 'array'],
+          description:
+            'Path(s) to image file(s) to analyze or explain. Passed to Codex CLI as --image.',
+        },
+        approvalPolicy: {
+          type: 'string',
+          description:
+            'Advanced: Codex CLI --approval-policy. Specify approval policy for code execution.',
+        },
+        sandbox: {
+          type: 'boolean',
+          description: 'Advanced: Codex CLI --sandbox. Run in sandbox mode.',
+        },
+        workingDirectory: {
+          type: 'string',
+          description:
+            'Advanced: Codex CLI --working-directory. Set working directory for execution.',
+        },
+        baseInstructions: {
+          type: 'string',
+          description:
+            'Advanced: Codex CLI --base-instructions. Set base instructions for the Codex model.',
         },
       },
       required: [],
@@ -132,6 +157,25 @@ export const toolDefinitions: ToolDefinition[] = [
         },
       },
       required: ['sessionId'],
+    },
+  },
+  {
+    name: TOOLS.CODEX_REPLY,
+    description:
+      'Continue a Codex CLI conversation by conversationId. Use this to send a new prompt in an ongoing conversation. Parameters: conversationId (string), prompt (string).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        conversationId: {
+          type: 'string',
+          description: 'The conversation/session ID to continue.',
+        },
+        prompt: {
+          type: 'string',
+          description: 'The user message or prompt to send.',
+        },
+      },
+      required: ['conversationId', 'prompt'],
     },
   },
 ];

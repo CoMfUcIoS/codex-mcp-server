@@ -76,8 +76,6 @@ Add to your Claude Desktop configuration file:
 
 ## Advanced Features & Tips
 
-## Advanced Features
-
 - **Graceful Shutdown:** The server handles SIGINT and SIGTERM for clean shutdowns, ensuring clients do not see abrupt disconnects.
 - **Pagination:** Large outputs are split into pages, with `nextPageToken` and `pageToken` for navigation. Control default size with `CODEX_PAGE_SIZE`.
 - **Session Management:** Use `sessionId` for conversational context, with automatic expiration (TTL configurable via `CODEX_SESSION_TTL_MS`).
@@ -122,39 +120,19 @@ All tools return structured error messages for invalid arguments, tool names, or
 }
 ```
 
-**Examples:**
+**Example error response:**
 
-- Invalid tool name:
-  ```json
-  {
-    "isError": true,
-    "content": [{ "type": "text", "text": "Unknown tool: fooBar" }]
-  }
-  ```
-- Invalid arguments:
-  ```json
-  {
-    "isError": true,
-    "content": [
-      {
-        "type": "text",
-        "text": "Validation failed for tool 'codex': Missing required 'prompt' (or provide a 'pageToken')."
-      }
-    ]
-  }
-  ```
-- Execution failure:
-  ```json
-  {
-    "isError": true,
-    "content": [
-      {
-        "type": "text",
-        "text": "Failed to execute tool 'codex': Codex CLI not found"
-      }
-    ]
-  }
-  ```
+```json
+{
+  "isError": true,
+  "content": [
+    {
+      "type": "text",
+      "text": "Missing required 'prompt' (or provide a 'pageToken')."
+    }
+  ]
+}
+```
 
 All errors include a clear message and the tool name for easier debugging.
 
@@ -170,34 +148,13 @@ You can discover all available tools and their schemas by calling the `listTools
 
 The response will be a JSON array describing each tool and its parameters.
 
-## Advanced Features & Tips
-
-- **Session Management:**
-  - Provide a `sessionId` to maintain conversational context across multiple Codex calls.
-  - Use `resetSession: true` to clear the context for a session (start fresh).
-  - **Session Expiration:** Sessions expire automatically after a configurable time-to-live (TTL). By default, sessions last for 1 hour. You can change this by setting the `CODEX_SESSION_TTL_MS` environment variable (milliseconds). Expired sessions are cleaned up automatically.
-  - List all active sessions with metadata (sessionId, number of turns, bytes, timestamps, expiration) using the `listSessions` tool.
-  - Delete a session using the `deleteSession` tool.
-  - Get statistics and metadata for a session using the `sessionStats` tool.
-  - If `sessionId` is omitted, each call is stateless.
-- **Pagination:**
-  - Large outputs are split into pages. Use the `nextPageToken` from the response to fetch additional output with the `pageToken` parameter.
-  - You can control the default page size with the `CODEX_PAGE_SIZE` environment variable (default: 40000, min: 1000, max: 200000).
-  - You can also override the page size for a single request by passing the `pageSize` parameter to the tool call.
-- **Error Handling:**
-  - Invalid tool names or arguments return structured error messages in the response.
-- **Tool Discovery:**
-  - The MCP protocol supports listing all available tools and their schemas for client introspection.
-- **Graceful Shutdown:**
-  - The server handles `SIGINT` and `SIGTERM` for clean shutdowns, ensuring clients do not see abrupt disconnects.
-
 ## Usage in Claude Code
 
 Once installed, Claude Code can use these tools:
 
 ### `codex` - AI Coding Assistant
 
-Ask Codex to analyze code, generate solutions, or provide coding assistance.
+Ask Codex to analyze code, generate solutions, or provide coding assistance. Now supports image input for code or diagram analysis.
 
 **Usage:**
 
@@ -213,10 +170,67 @@ Use the codex tool to explain this function:
 - `pageToken` (optional, string): Opaque token returned from a previous call to fetch the next chunk of output.
 - `sessionId` (optional, string): Stable ID to enable conversational context across calls.
 - `resetSession` (optional, boolean): If true, clears the session identified by sessionId.
+- `image` (optional, string or string[]): Path(s) to image file(s) to analyze or explain. Passed to Codex CLI as `--image`.
+- `approvalPolicy` (optional, string): Advanced. Codex CLI `--approval-policy`. Specify approval policy for code execution.
+- `sandbox` (optional, boolean): Advanced. Codex CLI `--sandbox`. Run in sandbox mode.
+- `workingDirectory` (optional, string): Advanced. Codex CLI `--working-directory`. Set working directory for execution.
+
+- `baseInstructions` (optional, string): Advanced. Codex CLI `--base-instructions`. Set base instructions for the Codex model.
+
+**Examples:**
+
+Basic prompt:
+
+```json
+{
+  "prompt": "Explain this TypeScript function"
+}
+```
+
+Image input:
+
+```json
+{
+  "prompt": "Explain this diagram",
+  "image": "diagram.png"
+}
+```
+
+Multiple images:
+
+```json
+{
+  "prompt": "Summarize these diagrams",
+  "image": ["img1.png", "img2.jpg"]
+}
+```
+
+Advanced options:
+
+```json
+{
+  "prompt": "Run this code in a sandbox",
+  "sandbox": true,
+  "workingDirectory": "/tmp/safe",
+  "baseInstructions": "Always comment code."
+}
+```
+
+### `codex-reply` - Continue a Conversation
+
+Continue a conversation in an existing Codex session:
+
+```json
+{
+  "tool": "codex-reply",
+  "conversationId": "abc123",
+  "prompt": "Add more tests for edge cases."
+}
+```
 
 ### `listSessions` - List Active Sessions
 
-Useful for debugging or selecting a session to clear. if you want to clear the session you can use the `resetSession` parameter.
+Useful for debugging or selecting a session to clear. If you want to clear the session you can use the `resetSession` parameter.
 
 ### `deleteSession` - Delete a Session
 
@@ -245,6 +259,14 @@ Test if the MCP server is working properly.
 ### `help` - Codex CLI Help
 
 Get information about Codex CLI capabilities and commands.
+
+### Tool Discovery
+
+Call `listTools` to get a machine-readable list of all available tools and their schemas for client introspection.
+
+```json
+{ "tool": "listTools" }
+```
 
 ## Example Workflows
 
@@ -321,19 +343,6 @@ You’ll receive a helpful error message explaining how to add one.
 
 > Supported config formats: TOML, YAML, JSON.
 
-**Example Output:**
-
-```
-- o4-mini: Provider: openai
-- gpt-3.5-turbo: Profile: gpt3, Provider: openai-chat-completions
-- o3: Profile: o3, Provider: openai
-```
-
-**If no config file is found:**  
-You’ll receive a helpful error message explaining how to add one.
-
-> Supported config formats: TOML, YAML, JSON.
-
 ### Pagination Example
 
 When Codex’s output is very large, the server automatically returns a `nextPageToken` in the result. You can use this token to fetch subsequent chunks:
@@ -374,40 +383,6 @@ This project uses **Jest** for unit and integration testing. Handlers, server lo
 npm test
 ```
 
-### Watch Tests
+---
 
-```bash
-npm run test:watch
-```
-
-### Test Coverage
-
-```bash
-npm run test:coverage
-```
-
-This will output a coverage summary for statements, branches, functions, and lines.
-
-### Linting & Formatting
-
-Lint code with:
-
-```bash
-npm run lint
-```
-
-Auto-fix lint errors:
-
-```bash
-npm run lint:fix
-```
-
-Format code with Prettier:
-
-```bash
-npm run format
-```
-
-## License
-
-ISC
+See [`docs/tools.md`](docs/tools.md) and [`docs/usage.md`](docs/usage.md) for full API and usage documentation.

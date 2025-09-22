@@ -11,6 +11,7 @@ export const TOOLS = {
   DELETE_SESSION: 'deleteSession',
   SESSION_STATS: 'sessionStats',
   RESUME: 'resume',
+  CODEX_REPLY: 'codex-reply',
 } as const;
 
 export const ListToolsToolSchema = z.object({});
@@ -50,6 +51,11 @@ export const CodexToolSchema = z.object({
   sessionId: z.string().optional(),
   resetSession: z.boolean().optional(),
   model: z.string().optional(), // Optional model selection
+  image: z.union([z.string(), z.array(z.string())]).optional(), // Image input(s)
+  approvalPolicy: z.string().optional(), // Advanced: Codex CLI --approval-policy
+  sandbox: z.boolean().optional(), // Advanced: Codex CLI --sandbox
+  workingDirectory: z.string().optional(), // Advanced: Codex CLI --working-directory
+  baseInstructions: z.string().optional(), // Advanced: Codex CLI --base-instructions
 });
 
 export const ListSessionsToolSchema = z.object({});
@@ -63,6 +69,12 @@ export const HelpToolSchema = z.object({});
 
 export type CodexToolArgs = z.infer<typeof CodexToolSchema>;
 export type PingToolArgs = z.infer<typeof PingToolSchema>;
+
+export const CodexReplyToolSchema = z.object({
+  conversationId: z.string(),
+  prompt: z.string(),
+});
+export type CodexReplyToolArgs = z.infer<typeof CodexReplyToolSchema>;
 
 // Command execution result
 export interface CommandResult {

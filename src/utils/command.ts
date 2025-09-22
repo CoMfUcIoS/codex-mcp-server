@@ -27,9 +27,14 @@ export async function executeCommand(
       stderr: result.stderr,
     };
   } catch (error) {
+    // Log full error details for debugging
+    console.error(chalk.red('Command execution error:'), error);
+    if (error instanceof Error && error.stack) {
+      console.error(chalk.red('Stack trace:'), error.stack);
+    }
     throw new CommandExecutionError(
       [file, ...args].join(' '),
-      'Command execution failed',
+      error instanceof Error ? error.message : 'Command execution failed',
       error
     );
   }

@@ -7,6 +7,8 @@ import {
   PingToolSchema,
   HelpToolSchema,
   ListSessionsToolSchema,
+  CodexReplyToolSchema,
+  CodexReplyToolArgs,
 } from '../types.js';
 import { ToolExecutionError, ValidationError } from '../errors.js';
 import { executeCommand, executeCommandStreamed } from '../utils/command.js';
@@ -19,6 +21,7 @@ import {
   clearSession,
   listSessionIds,
 } from '../utils/sessionStore.js';
+import { toolDefinitions } from './definitions.js';
 import {
   makeRunId,
   buildPromptWithSentinels,
@@ -26,6 +29,46 @@ import {
 } from '../utils/promptSanitizer.js';
 
 export class CodexToolHandler {
+  private executeCommandStreamed: typeof executeCommandStreamed;
+  private clearSession: typeof clearSession;
+  private appendTurn: typeof appendTurn;
+  private getTranscript: typeof getTranscript;
+  private saveChunk: typeof saveChunk;
+  private peekChunk: typeof peekChunk;
+  private advanceChunk: typeof advanceChunk;
+  private makeRunId: typeof makeRunId;
+  private buildPromptWithSentinels: typeof buildPromptWithSentinels;
+  private stripEchoesAndMarkers: typeof stripEchoesAndMarkers;
+
+  constructor(
+    deps?: Partial<{
+      executeCommandStreamed: typeof executeCommandStreamed;
+      clearSession: typeof clearSession;
+      appendTurn: typeof appendTurn;
+      getTranscript: typeof getTranscript;
+      saveChunk: typeof saveChunk;
+      peekChunk: typeof peekChunk;
+      advanceChunk: typeof advanceChunk;
+      makeRunId: typeof makeRunId;
+      buildPromptWithSentinels: typeof buildPromptWithSentinels;
+      stripEchoesAndMarkers: typeof stripEchoesAndMarkers;
+    }>
+  ) {
+    this.executeCommandStreamed =
+      deps?.executeCommandStreamed ?? executeCommandStreamed;
+    this.clearSession = deps?.clearSession ?? clearSession;
+    this.appendTurn = deps?.appendTurn ?? appendTurn;
+    this.getTranscript = deps?.getTranscript ?? getTranscript;
+    this.saveChunk = deps?.saveChunk ?? saveChunk;
+    this.peekChunk = deps?.peekChunk ?? peekChunk;
+    this.advanceChunk = deps?.advanceChunk ?? advanceChunk;
+    this.makeRunId = deps?.makeRunId ?? makeRunId;
+    this.buildPromptWithSentinels =
+      deps?.buildPromptWithSentinels ?? buildPromptWithSentinels;
+    this.stripEchoesAndMarkers =
+      deps?.stripEchoesAndMarkers ?? stripEchoesAndMarkers;
+  }
+
   async execute(args: unknown): Promise<ToolResult> {
     try {
       const {
@@ -35,7 +78,19 @@ export class CodexToolHandler {
         sessionId,
         resetSession,
         model,
-      }: CodexToolArgs & { model?: string } = CodexToolSchema.parse(args);
+        image,
+        approvalPolicy,
+        sandbox,
+        workingDirectory,
+        baseInstructions,
+      }: CodexToolArgs & {
+        model?: string;
+        image?: string | string[];
+        approvalPolicy?: string;
+        sandbox?: boolean;
+        workingDirectory?: string;
+        baseInstructions?: string;
+      } = CodexToolSchema.parse(args);
 
       const DEFAULT_PAGE = Number(process.env.CODEX_PAGE_SIZE ?? 40000);
       const pageLen = Math.max(
@@ -44,13 +99,13 @@ export class CodexToolHandler {
       );
 
       if (sessionId && resetSession) {
-        clearSession(sessionId);
+        this.clearSession(sessionId);
         // do not return here; user may supply a fresh prompt in the same call
       }
 
       // Subsequent page request
       if (pageToken) {
-        const remaining = peekChunk(String(pageToken));
+        const remaining = this.peekChunk(String(pageToken));
         if (!remaining) {
           return {
             content: [
@@ -64,7 +119,7 @@ export class CodexToolHandler {
         const head = remaining.slice(0, pageLen);
         const tail = remaining.slice(pageLen);
         // advance in-place; keep token stable for idempotent retries
-        advanceChunk(String(pageToken), head.length);
+        this.advanceChunk(String(pageToken), head.length);
         const meta = tail.length
           ? { nextPageToken: String(pageToken) }
           : undefined;
@@ -121,7 +176,7 @@ export class CodexToolHandler {
       }
 
       // Build an effective prompt with session context if provided, fenced by sentinels
-      const prior = sessionId ? (getTranscript(sessionId) ?? []) : [];
+      const prior = sessionId ? (this.getTranscript(sessionId) ?? []) : [];
       const stitched =
         prior.length > 0
           ? prior
@@ -130,8 +185,8 @@ export class CodexToolHandler {
               )
               .join('\n')
           : null;
-      const runId = makeRunId();
-      const effectivePrompt = buildPromptWithSentinels(
+      const runId = this.makeRunId();
+      const effectivePrompt = this.buildPromptWithSentinels(
         runId,
         stitched,
         cleanPrompt
@@ -142,31 +197,52 @@ export class CodexToolHandler {
       if (selectedModel) {
         cliArgs.push('-m', selectedModel);
       }
+
+      // Add image input if provided
+      if (image) {
+        const images = Array.isArray(image) ? image : [image];
+        cliArgs.push('--image', images.join(','));
+      }
+
+      // Add advanced CLI options if provided
+      if (approvalPolicy) {
+        cliArgs.push('--approval-policy', approvalPolicy);
+      }
+      if (sandbox) {
+        cliArgs.push('--sandbox');
+      }
+      if (workingDirectory) {
+        cliArgs.push('--working-directory', workingDirectory);
+      }
+      if (baseInstructions) {
+        cliArgs.push('--base-instructions', baseInstructions);
+      }
+
       cliArgs.push(effectivePrompt);
 
       // Use streamed execution to avoid maxBuffer and handle very large outputs.
-      const result = await executeCommandStreamed('codex', cliArgs);
+      const result = await this.executeCommandStreamed('codex', cliArgs);
 
       // Strip any echoed context/prompt and sentinels to return only the new answer
       const outputRaw = result.stdout || 'No output from Codex';
-      const output = stripEchoesAndMarkers(runId, stitched, outputRaw);
+      const output = this.stripEchoesAndMarkers(runId, stitched, outputRaw);
 
       if (output.length <= pageLen) {
         // Append turns to session after successful run (if enabled)
         if (sessionId) {
-          appendTurn(sessionId, 'user', cleanPrompt);
-          appendTurn(sessionId, 'assistant', output);
+          this.appendTurn(sessionId, 'user', cleanPrompt);
+          this.appendTurn(sessionId, 'assistant', output);
         }
         return { content: [{ type: 'text', text: output }] };
       }
 
       const head = output.slice(0, pageLen);
       const tail = output.slice(pageLen);
-      const meta = { nextPageToken: saveChunk(tail) };
+      const meta = { nextPageToken: this.saveChunk(tail) };
       // Append full output to session (not only the head), so future context is complete
       if (sessionId) {
-        appendTurn(sessionId, 'user', cleanPrompt);
-        appendTurn(sessionId, 'assistant', output);
+        this.appendTurn(sessionId, 'user', cleanPrompt);
+        this.appendTurn(sessionId, 'assistant', output);
       }
       return {
         content: [
@@ -189,22 +265,39 @@ export class CodexToolHandler {
 }
 
 export class ListSessionsToolHandler {
+  private listSessionMeta: () => Promise<any>;
+  constructor(deps?: Partial<{ listSessionMeta: () => Promise<any> }>) {
+    this.listSessionMeta =
+      deps?.listSessionMeta ??
+      (async () => {
+        // fallback to dynamic import for prod
+        const mod = await import('../utils/sessionStore.js');
+        return mod.listSessionMeta();
+      });
+  }
   async execute(args: unknown): Promise<ToolResult> {
     try {
       ListSessionsToolSchema.parse(args);
-      const { listSessionMeta } = await import('../utils/sessionStore.js');
-      const meta = listSessionMeta();
+      const meta = await this.listSessionMeta();
       if (!meta.length) {
         return { content: [{ type: 'text', text: 'No active sessions.' }] };
       }
       const text = meta
-        .map((s) =>
-          s
-            ? `- ${s.sessionId}: turns=${s.turns}, bytes=${s.bytes}, createdAt=${new Date(s.createdAt).toISOString()}, lastUsedAt=${new Date(s.lastUsedAt).toISOString()}, expiresAt=${new Date(s.expiresAt).toISOString()}`
-            : ''
+        .map(
+          (s: {
+            sessionId: string;
+            turns: number;
+            bytes: number;
+            createdAt: number;
+            lastUsedAt: number;
+            expiresAt: number;
+          }) =>
+            s
+              ? `- ${s.sessionId}: turns=${s.turns}, bytes=${s.bytes}, createdAt=${new Date(s.createdAt).toISOString()}, lastUsedAt=${new Date(s.lastUsedAt).toISOString()}, expiresAt=${new Date(s.expiresAt).toISOString()}`
+              : ''
         )
         .filter(Boolean)
-        .join('\\n');
+        .join('\n');
       return { content: [{ type: 'text', text }] };
     } catch (error) {
       if (error instanceof ZodError) {
@@ -220,9 +313,13 @@ export class ListSessionsToolHandler {
 }
 
 export class PingToolHandler {
+  private pingSchema: typeof PingToolSchema;
+  constructor(deps?: Partial<{ pingSchema: typeof PingToolSchema }>) {
+    this.pingSchema = deps?.pingSchema ?? PingToolSchema;
+  }
   async execute(args: unknown): Promise<ToolResult> {
     try {
-      const { message = 'pong' }: PingToolArgs = PingToolSchema.parse(args);
+      const { message = 'pong' }: PingToolArgs = this.pingSchema.parse(args);
 
       return {
         content: [
@@ -274,7 +371,15 @@ let toml: typeof import('toml');
 let yaml: typeof import('yaml');
 
 export class ListModelsToolHandler {
+  private injectedFs?: typeof import('fs/promises');
+  constructor(deps?: Partial<{ fs: typeof import('fs/promises') }>) {
+    if (deps?.fs) {
+      this.injectedFs = deps.fs;
+    }
+  }
+
   async execute(_args: unknown): Promise<ToolResult> {
+    const fs = this.injectedFs ?? (await import('fs/promises'));
     // Search for config files in order: TOML, YAML, JSON
     const configPaths = [
       `${os.homedir()}/.codex/config.toml`,
@@ -283,27 +388,46 @@ export class ListModelsToolHandler {
     ];
     let config: any = null;
     let format: 'toml' | 'yaml' | 'json' | null = null;
+    let parseError: { path: string; error: any } | null = null;
+    let foundConfigFile = false;
     for (const path of configPaths) {
       try {
         const data = await fs.readFile(path, 'utf8');
-        if (path.endsWith('.toml')) {
-          if (!toml) toml = await import('toml');
-          config = toml.parse(data);
-          format = 'toml';
-        } else if (path.endsWith('.yaml')) {
-          if (!yaml) yaml = await import('yaml');
-          config = yaml.parse(data);
-          format = 'yaml';
-        } else if (path.endsWith('.json')) {
-          config = JSON.parse(data);
-          format = 'json';
+        foundConfigFile = true;
+        try {
+          if (path.endsWith('.toml')) {
+            if (!toml) toml = await import('toml');
+            config = toml.parse(data);
+            format = 'toml';
+          } else if (path.endsWith('.yaml')) {
+            if (!yaml) yaml = await import('yaml');
+            config = yaml.parse(data);
+            format = 'yaml';
+          } else if (path.endsWith('.json')) {
+            config = JSON.parse(data);
+            format = 'json';
+          }
+        } catch (err) {
+          parseError = { path, error: err };
+          continue; // Try next config file
         }
-        break;
+        break; // Successfully parsed
       } catch (err) {
-        // File not found or parse error, try next
+        // File not found, try next
       }
     }
     if (!config) {
+      if (parseError && foundConfigFile) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Failed to parse Codex config file at ${parseError.path}: ${parseError.error?.message || parseError.error}`,
+            },
+          ],
+          isError: true,
+        };
+      }
       return {
         content: [
           {
@@ -332,10 +456,15 @@ export class ListModelsToolHandler {
       (config.profiles === undefined && config['[profiles]']);
     if (profiles && typeof profiles === 'object') {
       for (const [profileName, profile] of Object.entries(profiles)) {
-        if (profile && typeof profile === 'object' && profile.model) {
+        if (
+          profile &&
+          typeof profile === 'object' &&
+          'model' in profile &&
+          typeof (profile as any).model === 'string'
+        ) {
           models.push({
-            name: profile.model,
-            description: `Profile: ${profileName}${profile.model_provider ? `, Provider: ${profile.model_provider}` : ''}`,
+            name: (profile as any).model,
+            description: `Profile: ${profileName}${(profile as any).model_provider ? `, Provider: ${(profile as any).model_provider}` : ''}`,
           });
         }
       }
@@ -364,11 +493,15 @@ export class ListModelsToolHandler {
 }
 
 export class HelpToolHandler {
+  private executeCommand: typeof executeCommand;
+  constructor(deps?: Partial<{ executeCommand: typeof executeCommand }>) {
+    this.executeCommand = deps?.executeCommand ?? executeCommand;
+  }
   async execute(args: unknown): Promise<ToolResult> {
     try {
       HelpToolSchema.parse(args);
 
-      const result = await executeCommand('codex', ['--help']);
+      const result = await this.executeCommand('codex', ['--help']);
 
       return {
         content: [
@@ -382,9 +515,16 @@ export class HelpToolHandler {
       if (error instanceof ZodError) {
         throw new ValidationError(TOOLS.HELP, error.message);
       }
+      // Log the error details for debugging
+      console.error('[HelpToolHandler] Error executing help command:', error);
+      if (error instanceof Error && error.stack) {
+        console.error('[HelpToolHandler] Stack trace:', error.stack);
+      }
       throw new ToolExecutionError(
         TOOLS.HELP,
-        'Failed to execute help command',
+        error instanceof Error
+          ? `Failed to execute help command: ${error.message}`
+          : 'Failed to execute help command',
         error
       );
     }
@@ -392,11 +532,18 @@ export class HelpToolHandler {
 }
 
 export class DeleteSessionToolHandler {
+  private clearSession: (sessionId: string) => void;
+  constructor(deps?: Partial<{ clearSession: (sessionId: string) => void }>) {
+    this.clearSession = deps?.clearSession ?? (() => {});
+  }
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
       const { sessionId } = args as { sessionId: string };
-      const { clearSession } = await import('../utils/sessionStore.js');
-      clearSession(sessionId);
+      if (!this.clearSession) {
+        const { clearSession } = await import('../utils/sessionStore.js');
+        this.clearSession = clearSession;
+      }
+      this.clearSession(sessionId);
       return {
         content: [{ type: 'text', text: `Session ${sessionId} deleted.` }],
       };
@@ -411,11 +558,18 @@ export class DeleteSessionToolHandler {
 }
 
 export class SessionStatsToolHandler {
+  private getSessionMeta?: (sessionId: string) => any;
+  constructor(deps?: Partial<{ getSessionMeta: (sessionId: string) => any }>) {
+    this.getSessionMeta = deps?.getSessionMeta;
+  }
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
       const { sessionId } = args as { sessionId: string };
-      const { getSessionMeta } = await import('../utils/sessionStore.js');
-      const meta = getSessionMeta(sessionId);
+      if (!this.getSessionMeta) {
+        const { getSessionMeta } = await import('../utils/sessionStore.js');
+        this.getSessionMeta = getSessionMeta;
+      }
+      const meta = this.getSessionMeta(sessionId);
       if (!meta) {
         return {
           content: [{ type: 'text', text: `Session ${sessionId} not found.` }],
@@ -446,6 +600,39 @@ export class ListToolsToolHandler {
     };
   }
 }
+
+export class CodexReplyToolHandler {
+  private executeCommandStreamed: typeof executeCommandStreamed;
+  constructor(
+    deps?: Partial<{ executeCommandStreamed: typeof executeCommandStreamed }>
+  ) {
+    this.executeCommandStreamed =
+      deps?.executeCommandStreamed ?? executeCommandStreamed;
+  }
+  async execute(args: unknown): Promise<ToolResult> {
+    try {
+      const { conversationId, prompt }: CodexReplyToolArgs =
+        CodexReplyToolSchema.parse(args);
+      const cliArgs = ['reply', '-c', conversationId, prompt];
+      const result = await this.executeCommandStreamed('codex', cliArgs);
+      return {
+        content: [
+          { type: 'text', text: result.stdout || 'No output from Codex reply' },
+        ],
+      };
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ValidationError(TOOLS.CODEX_REPLY, error.message);
+      }
+      throw new ToolExecutionError(
+        TOOLS.CODEX_REPLY,
+        'Failed to execute codex-reply command',
+        error
+      );
+    }
+  }
+}
+
 export const toolHandlers = {
   [TOOLS.CODEX]: new CodexToolHandler(),
   [TOOLS.LIST_SESSIONS]: new ListSessionsToolHandler(),
@@ -456,4 +643,5 @@ export const toolHandlers = {
   [TOOLS.LIST_MODELS]: new ListModelsToolHandler(),
   [TOOLS.DELETE_SESSION]: new DeleteSessionToolHandler(),
   [TOOLS.SESSION_STATS]: new SessionStatsToolHandler(),
+  [TOOLS.CODEX_REPLY]: new CodexReplyToolHandler(),
 } as const;
