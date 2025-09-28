@@ -37,20 +37,25 @@ describe('CodexMcpServer', () => {
       const callToolHandler = server.server._requestHandlers.get('tools/call');
       expect(callToolHandler).toBeDefined();
 
-      const result = await callToolHandler({
-        method: 'tools/call',
-        params: {
-          name: TOOLS.PING,
-          arguments: { message: 'test' }
-        }
-      }, {});
+      const result = await callToolHandler(
+        {
+          method: 'tools/call',
+          params: {
+            name: TOOLS.PING,
+            arguments: { message: 'test' },
+          },
+        },
+        {}
+      );
 
       expect(result).toEqual({
-        content: [{
-          type: 'text',
-          text: expect.stringContaining('Test error')
-        }],
-        isError: true
+        content: [
+          {
+            type: 'text',
+            text: expect.stringContaining('Test error'),
+          },
+        ],
+        isError: true,
       });
     } finally {
       // Restore original handler
@@ -63,20 +68,25 @@ describe('CodexMcpServer', () => {
     const callToolHandler = server.server._requestHandlers.get('tools/call');
     expect(callToolHandler).toBeDefined();
 
-    const result = await callToolHandler({
-      method: 'tools/call',
-      params: {
-        name: 'unknown-tool',
-        arguments: {}
-      }
-    }, {});
+    const result = await callToolHandler(
+      {
+        method: 'tools/call',
+        params: {
+          name: 'unknown-tool',
+          arguments: {},
+        },
+      },
+      {}
+    );
 
     expect(result).toEqual({
-      content: [{
-        type: 'text',
-        text: expect.stringContaining('Unknown tool: unknown-tool')
-      }],
-      isError: true
+      content: [
+        {
+          type: 'text',
+          text: expect.stringContaining('Unknown tool: unknown-tool'),
+        },
+      ],
+      isError: true,
     });
   });
 

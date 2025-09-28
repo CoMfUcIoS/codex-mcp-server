@@ -24,13 +24,18 @@ describe('Codex MCP Server', () => {
       },
     }));
     await jest.unstable_mockModule('../utils/command.js', () => ({
-      executeCommand: jest.fn().mockResolvedValue({ stdout: 'mocked output', stderr: '' }),
-      executeCommandStreamed: jest.fn().mockResolvedValue({ stdout: 'mocked streamed output', stderr: '' }),
+      executeCommand: jest
+        .fn()
+        .mockResolvedValue({ stdout: 'mocked output', stderr: '' }),
+      executeCommandStreamed: jest
+        .fn()
+        .mockResolvedValue({ stdout: 'mocked streamed output', stderr: '' }),
     }));
     // Dynamically import after mocks
     ({ TOOLS } = await import('../types.js'));
     ({ toolDefinitions } = await import('../tools/definitions.js'));
-    ({ toolHandlers, CodexToolHandler, PingToolHandler, HelpToolHandler } = await import('../tools/handlers.js'));
+    ({ toolHandlers, CodexToolHandler, PingToolHandler, HelpToolHandler } =
+      await import('../tools/handlers.js'));
     ({ CodexMcpServer } = await import('../server.js'));
   });
   test.skip('should build successfully', async () => {
@@ -62,7 +67,9 @@ describe('Codex MCP Server', () => {
       // prompt is now optional to allow pageToken-only calls
       expect(codexTool?.inputSchema.required).toEqual([]);
       // Update to match the actual description
-      expect(codexTool?.description).toContain('Run the Codex CLI in non-interactive mode');
+      expect(codexTool?.description).toContain(
+        'Run the Codex CLI in non-interactive mode'
+      );
     });
 
     test('ping tool should have optional message parameter', () => {
@@ -89,7 +96,9 @@ describe('Codex MCP Server', () => {
       const handler = toolHandlers[TOOLS.LIST_SESSIONS];
       // This test now expects the real implementation, so just check for the default output
       const result = await handler.execute({});
-      expect(result.content[0].text).toMatch(/No active sessions|turns=|bytes=/);
+      expect(result.content[0].text).toMatch(
+        /No active sessions|turns=|bytes=/
+      );
     });
 
     test('deleteSession deletes a session', async () => {
@@ -106,13 +115,20 @@ describe('Codex MCP Server', () => {
 
     test('sessionStats handles missing session', async () => {
       const handler = toolHandlers[TOOLS.SESSION_STATS];
-      jest.doMock('../utils/sessionStore.js', () => ({ getSessionMeta: () => undefined }), { virtual: true });
+      jest.doMock(
+        '../utils/sessionStore.js',
+        () => ({ getSessionMeta: () => undefined }),
+        { virtual: true }
+      );
       const result = await handler.execute({ sessionId: 'missing' });
       expect(result.content[0].text).toContain('Session missing not found');
     });
     test('codex handler uses provided model', async () => {
       const handler = new CodexToolHandler();
-      const result = await handler.execute({ prompt: 'Write Python', model: 'custom-model' });
+      const result = await handler.execute({
+        prompt: 'Write Python',
+        model: 'custom-model',
+      });
       // Should call executeCommandStreamed with fallback to gpt-5 medium
       const { executeCommandStreamed } = await import('../utils/command.js');
       expect(executeCommandStreamed).toHaveBeenCalledWith(
