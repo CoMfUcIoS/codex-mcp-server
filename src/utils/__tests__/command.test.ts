@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { executeCommand, executeCommandStreamed } from '../command';
 import type { CommandResult } from '../../types';
 
@@ -52,5 +53,30 @@ describe('executeCommandStreamed', () => {
     await expect(
       executeCommandStreamed(process.execPath, ['-e', 'process.exit(2)'])
     ).rejects.toThrow();
+  });
+
+  it('logs error details and stack trace when commands fail', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const originalDebug = process.env.DEBUG;
+    process.env.DEBUG = '1'; // Enable debug logging
+
+    try {
+      // This will fail and trigger the error logging paths
+      await executeCommand('this-command-does-not-exist', []);
+    } catch (e) {
+      // Expected to throw
+    }
+
+    // Check that console.error was called with error details
+    const errorCalls = consoleSpy.mock.calls.filter(call =>
+      call[0] && call[0].toString().includes('Command execution error:')
+    );
+    expect(errorCalls.length).toBeGreaterThan(0);
+
+    // Just verify the error logging happened, which proves the coverage path was taken
+    expect(errorCalls[0][0]).toContain('Command execution error:');
+
+    consoleSpy.mockRestore();
+    process.env.DEBUG = originalDebug; // Restore original value
   });
 });

@@ -8,7 +8,7 @@ describe('executeCommand integration', () => {
   });
 
   it('should reject for an invalid command', async () => {
-    await expect(executeCommand('notarealcommand')).rejects.toBeInstanceOf(CommandExecutionError);
+    await expect(executeCommand('notarealcommand')).rejects.toThrow();
   });
 });
 

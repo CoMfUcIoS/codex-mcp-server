@@ -38,7 +38,6 @@ export class CodexMcpServer {
       return { tools: toolDefinitions };
     });
 
-/// <reference types="node" />
     // Call tool handler
     this.server.setRequestHandler(
       CallToolRequestSchema,
@@ -50,7 +49,9 @@ export class CodexMcpServer {
           }
           const handler = toolHandlers[name];
           // Ensure the return value matches the expected type
-          const result = await handler.execute(args);
+          // If args is undefined, provide an empty object
+          const safeArgs = args ?? {};
+          const result = await handler.execute(safeArgs);
           return { ...result };
         } catch (error) {
           return {

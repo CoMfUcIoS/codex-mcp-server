@@ -4,7 +4,7 @@ Set these env vars in your editor/terminal as needed:
 
 ```bash
 export OPENAI_API_KEY=...           # Required by Codex CLI unless logged in
-export CODEX_PAGE_SIZE=40000        # Optional default page size
+export CODEX_PAGE_SIZE=40000        # Optional default page size (can be overridden per request with `pageSize` parameter)
 export CODEX_SESSION_TTL_MS=3600000 # Optional session TTL (ms)
 export CODEX_SESSION_MAX_BYTES=400000
 ```

@@ -1,15 +1,19 @@
 # Codex MCP Server
 
-MCP server wrapper for OpenAI Codex CLI that enables Claude Code to leverage Codex's AI capabilities directly.
+MCP server wrapper for the OpenAI **Codex CLI** that lets **Claude Code** (and any MCP‑compatible client) use Codex locally via stdio.
 
 ```mermaid
 graph LR
-    A[Claude Code] --> B[Codex MCP Server]
+    A[Claude Code / MCP Client] --> B[Codex MCP Server]
 
-    B --> C[codex tool]
-    B --> H[listSessions tool]
-    B --> D[ping tool]
-    B --> E[help tool]
+    B --> C[codex]
+    B --> L[listTools]
+    B --> S[listSessions]
+    B --> X[deleteSession]
+    B --> T[sessionStats]
+    B --> P[ping]
+    B --> H[help]
+    B --> M[listModels]
 
     C --> F[Codex CLI]
     F --> G[OpenAI API]
@@ -17,24 +21,27 @@ graph LR
     style A fill:#FF6B35
     style B fill:#4A90E2
     style C fill:#00D4AA
-    style D fill:#00D4AA
-    style E fill:#00D4AA
+    style L fill:#00D4AA
+    style S fill:#00D4AA
+    style X fill:#00D4AA
+    style T fill:#00D4AA
+    style P fill:#00D4AA
+    style H fill:#00D4AA
+    style M fill:#00D4AA
     style F fill:#FFA500
     style G fill:#FF9500
-    style H fill:#00D4AA
-
 ```
 
 ## Prerequisites
 
-- **OpenAI Codex CLI** must be pre-installed and configured
-  - Install: `npm i -g @openai/codex` or `brew install codex`
-  - Setup: Run `codex login` or set `OPENAI_API_KEY` environment variable
-- **Claude Code** installed
+- **OpenAI Codex CLI** installed & configured  
+  - Install: `npm i -g @openai/codex` or `brew install codex`  
+  - Setup: `codex login` or set `OPENAI_API_KEY`
+- **Claude Code** (or another MCP client)
 
 ## Installation
 
-### One-Click Installation
+### One‑Click Installation
 
 #### VS Code
 
@@ -50,7 +57,7 @@ graph LR
 
 ### Manual Installation
 
-#### Claude Code
+#### Claude Code (CLI)
 
 ```bash
 claude mcp add codex-cli -- npx -y @comfucios/codex-mcp-server
@@ -60,7 +67,7 @@ claude mcp add codex-cli -- npx -y @comfucios/codex-mcp-server
 
 Add to your Claude Desktop configuration file:
 
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
 **Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
 
 ```json
@@ -76,99 +83,132 @@ Add to your Claude Desktop configuration file:
 
 ## Advanced Features & Tips
 
-- **Session Management:**
-  - Provide a `sessionId` to maintain conversational context across multiple Codex calls.
-  - Use `resetSession: true` to clear the context for a session (start fresh).
-  - If `sessionId` is omitted, each call is stateless.
-- **Pagination:**
-  - Large outputs are split into pages. Use the `nextPageToken` from the response to fetch additional output with the `pageToken` parameter.
-  - You can control the default page size with the `CODEX_PAGE_SIZE` environment variable (default: 40000, min: 1000, max: 200000).
-- **Error Handling:**
-  - Invalid tool names or arguments return structured error messages in the response.
-- **Tool Discovery:**
-  - The MCP protocol supports listing all available tools and their schemas for client introspection.
-- **Graceful Shutdown:**
-  - The server handles `SIGINT` and `SIGTERM` for clean shutdowns, ensuring clients do not see abrupt disconnects.
+- **Graceful shutdown** — Handles SIGINT/SIGTERM so clients don’t see abrupt disconnects.
+- **Pagination** — Large outputs are chunked; use `nextPageToken`/`pageToken`. Default size via `CODEX_PAGE_SIZE`.
+- **Session memory** — Pass `sessionId` to keep context; sessions expire after `CODEX_SESSION_TTL_MS` and trim when exceeding `CODEX_SESSION_MAX_BYTES`.
+- **Tool discovery** — Use `listTools` to get all tools with schemas (handy for client introspection).
+- **Image input** — The `codex` tool supports `image` paths (single or array) for code/diagram analysis.
+- **Model control** — Pass `model` to select **gpt‑5** with reasoning effort: `minimal`, `low`, `medium` (default), `high` (e.g. `"gpt-5 high"`).
 
-## Usage in Claude Code
+## Environment Variables
 
-Once installed, Claude Code can use these tools:
+Configure via env vars (shell or `.env`):
 
-### `codex` - AI Coding Assistant
+- `OPENAI_API_KEY` — Required by Codex CLI unless you’ve run `codex login`.
+- `CODEX_PAGE_SIZE` — Default page size (default: `40000`, min `1000`, max `200000`).
+- `CODEX_SESSION_TTL_MS` — Session time‑to‑live in ms (default: `3600000`, i.e. 1 hour).
+- `CODEX_SESSION_MAX_BYTES` — Max transcript bytes before trimming (default: `400000`).
 
-Ask Codex to analyze code, generate solutions, or provide coding assistance.
+## Troubleshooting
 
-**Usage:**
+- **Codex CLI not found**
+  - Install `@openai/codex` globally or via Homebrew.
+  - Ensure `codex --version` works and the install directory is on your `PATH`.
+- **Missing API key**
+  - Run `codex login` or set `OPENAI_API_KEY`.
+- **No Codex config file**
+  - Create one in `~/.codex/config.toml|.yaml|.json` (for use with `listModels`).
+- **Session expired**
+  - Sessions expire after `CODEX_SESSION_TTL_MS`. Use a new `sessionId` or increase TTL.
+- **Large output truncated**
+  - Use `pageToken` to fetch subsequent pages or raise `CODEX_PAGE_SIZE`.
 
+### Error format
+
+All tools return consistent, structured errors:
+
+```json
+{
+  "isError": true,
+  "content": [{ "type": "text", "text": "Error message here" }]
+}
 ```
-Use the codex tool to explain this function:
-[paste your code here]
+
+## Usage with Claude Code
+
+### `codex` — AI coding assistant
+
+Ask Codex to analyze code, generate solutions, or explain diagrams/images.
+
+**Common parameters**
+
+- `prompt` (string, required on first call unless paging)
+- `pageSize` (number, optional)
+- `pageToken` (string, optional)
+- `sessionId` (string, optional)
+- `resetSession` (boolean, optional)
+- `model` (string, optional — `"gpt-5 minimal|low|medium|high"`)
+- `image` (string or string[])
+- `approvalPolicy`, `sandbox`, `workingDirectory`, `baseInstructions` (advanced)
+
+**Examples**
+
+Basic:
+
+```json
+{ "prompt": "Explain this TypeScript function" }
 ```
 
-**Parameters:**
+Image input:
 
-- `prompt` (optional): Your coding question or request. Required on the first call.
-- `pageSize` (optional, number): Approximate characters per page (default 40,000).
-- `pageToken` (optional, string): Opaque token returned from a previous call to fetch the next chunk of output.
-- `sessionId` (optional, string): Stable ID to enable conversational context across calls.
-- `resetSession` (optional, boolean): If true, clears the session identified by sessionId.
+```json
+{ "prompt": "Explain this diagram", "image": "diagram.png" }
+```
 
-### `listSessions` - List Active Sessions
+Advanced options:
 
-Useful for debugging or selecting a session to clear. if you want to clear the session you can use the `resetSession` parameter.
+```json
+{
+  "prompt": "Run this code in a sandbox",
+  "sandbox": true,
+  "workingDirectory": "/tmp/safe",
+  "baseInstructions": "Always comment code."
+}
+```
 
-### `ping` - Connection Test
+### Other tools
 
-Test if the MCP server is working properly.
-
-### `help` - Codex CLI Help
-
-Get information about Codex CLI capabilities and commands.
+- `listSessions` — list active sessions (with metadata)
+- `deleteSession` — delete a session by ID
+- `sessionStats` — detailed stats for a session
+- `listModels` — list models discovered from your `~/.codex` config
+- `listTools` — machine‑readable tool list & schemas
+- `ping` — echo test
+- `help` — `codex --help` passthrough
 
 ## Example Workflows
 
-**Code Analysis:**
+**Code analysis**
 
 ```
-Please use the codex tool to review this TypeScript function and suggest improvements
+Use the codex tool to review this TypeScript function and suggest improvements
 ```
 
-**Bug Fixing:**
+**Bug fixing**
 
 ```
 Use codex to help debug this error: [error message]
 ```
 
-**Code Generation:**
+**Code generation**
 
 ```
 Ask codex to create a React component that handles file uploads
 ```
 
-### Pagination Example
+**Paging**
 
-When Codex’s output is very large, the server automatically returns a `nextPageToken` in the result.  
-You can use this token to fetch subsequent chunks:
-
-1. First call:
+1) First call:
 
 ```json
-{ "prompt": "Explain this codebase in detail" }
+{ "tool": "codex", "prompt": "...", "pageSize": 10000 }
 ```
 
-Response includes:
+2) Next page:
 
 ```json
-{ "nextPageToken": "abc123..." }
+{ "tool": "codex", "pageToken": "<nextPageToken>" }
 ```
-
-2. Next page call:
-
-```json
-{ "pageToken": "abc123...", "pageSize": 40000 }
-```
-
-Repeat until no nextPageToken is returned.
 
 ## Development
 
@@ -188,48 +228,12 @@ npm start
 
 ## Testing & Quality
 
-This project uses **Jest** for unit and integration testing. Handlers, server logic, and tool integrations are covered with both unit and light integration tests (mocking external dependencies and CLI calls).
-
-### Run All Tests
+Uses **Jest** (unit + light integration).
 
 ```bash
 npm test
 ```
 
-### Watch Tests
+---
 
-```bash
-npm run test:watch
-```
-
-### Test Coverage
-
-```bash
-npm run test:coverage
-```
-
-This will output a coverage summary for statements, branches, functions, and lines.
-
-### Linting & Formatting
-
-Lint code with:
-
-```bash
-npm run lint
-```
-
-Auto-fix lint errors:
-
-```bash
-npm run lint:fix
-```
-
-Format code with Prettier:
-
-```bash
-npm run format
-```
-
-## License
-
-ISC
+See [`docs/tools.md`](docs/tools.md), [`docs/usage.md`](docs/usage.md), and [`docs/configuration.md`](docs/configuration.md) for details.

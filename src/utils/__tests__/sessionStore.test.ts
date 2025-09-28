@@ -20,4 +20,9 @@ describe('SessionStore', () => {
     SessionStore.clearSession('id2');
     expect(SessionStore.getTranscript('id2')).toBeUndefined();
   });
+
+  it('getSessionMeta returns undefined for unknown id', async () => {
+    const { getSessionMeta } = await import('../sessionStore');
+    expect(getSessionMeta('notfound')).toBeUndefined();
+  });
 });

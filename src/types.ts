@@ -2,13 +2,20 @@ import { z } from 'zod';
 
 // Tool constants
 export const TOOLS = {
+  LIST_TOOLS: 'listTools',
   CODEX: 'codex',
   LIST_SESSIONS: 'listSessions',
   PING: 'ping',
   HELP: 'help',
+  LIST_MODELS: 'listModels',
+  DELETE_SESSION: 'deleteSession',
+  SESSION_STATS: 'sessionStats',
 } as const;
 
+export const ListToolsToolSchema = z.object({});
+export type ListToolsToolArgs = z.infer<typeof ListToolsToolSchema>;
 export type ToolName = (typeof TOOLS)[keyof typeof TOOLS];
+export const IdSchema = z.object({ sessionId: z.string().min(1) });
 
 // Tool definition interface
 export interface ToolDefinition {
@@ -42,6 +49,12 @@ export const CodexToolSchema = z.object({
   pageToken: z.string().optional(),
   sessionId: z.string().optional(),
   resetSession: z.boolean().optional(),
+  model: z.string().optional(), // Optional model selection
+  image: z.union([z.string(), z.array(z.string())]).optional(), // Image input(s)
+  approvalPolicy: z.string().optional(), // Advanced: Codex CLI --approval-policy
+  sandbox: z.boolean().optional(), // Advanced: Codex CLI --sandbox
+  workingDirectory: z.string().optional(), // Advanced: Codex CLI --working-directory
+  baseInstructions: z.string().optional(), // Advanced: Codex CLI --base-instructions
 });
 
 export const ListSessionsToolSchema = z.object({});

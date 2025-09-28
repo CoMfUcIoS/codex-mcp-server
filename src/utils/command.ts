@@ -4,22 +4,49 @@ import chalk from 'chalk';
 import { CommandExecutionError } from '../errors.js';
 import { type CommandResult } from '../types.js';
 
+import { withTimeout } from './timeout.js';
+
 const execFileAsync = promisify(execFile);
+
+function getTimeoutMs(): number {
+  const v = Number(process.env.CODEX_CMD_TIMEOUT_MS);
+  if (Number.isFinite(v) && v > 0) return v;
+  return 180_000; // default 3 minutes
+}
+
+function maybeLog(...args: any[]) {
+  if (process.env.DEBUG) {
+    // keep logs on stderr when explicitly debugging
+    console.error(...args);
+  }
+}
+
+function resolveExecutable(file: string): string {
+  if (process.platform === 'win32' && file === 'codex') {
+    return 'codex.cmd';
+  }
+  return file;
+}
 
 export async function executeCommand(
   file: string,
   args: string[] = []
 ): Promise<CommandResult> {
   try {
-    console.error(chalk.blue('Executing:'), file, args.join(' '));
+    const exe = resolveExecutable(file);
+    maybeLog(chalk.blue('Executing:'), exe, args.join(' '));
 
-    const result = await execFileAsync(file, args, {
-      shell: false,
-      maxBuffer: 64 * 1024 * 1024, // 64MB
-    });
+    const result = await withTimeout(
+      execFileAsync(exe, args, {
+        shell: false,
+        maxBuffer: 64 * 1024 * 1024, // 64MB
+      }),
+      getTimeoutMs(),
+      [exe, ...args].join(' ')
+    );
 
     if (result.stderr) {
-      console.error(chalk.yellow('Command stderr:'), result.stderr);
+      maybeLog(chalk.yellow('Command stderr:'), result.stderr);
     }
 
     return {
@@ -27,9 +54,14 @@ export async function executeCommand(
       stderr: result.stderr,
     };
   } catch (error) {
+    // Log full error details only in debug
+    maybeLog(chalk.red('Command execution error:'), error);
+    if (error instanceof Error && (error as any).stack) {
+      maybeLog(chalk.red('Stack trace:'), (error as any).stack);
+    }
     throw new CommandExecutionError(
       [file, ...args].join(' '),
-      'Command execution failed',
+      error instanceof Error ? error.message : 'Command execution failed',
       error
     );
   }
@@ -45,56 +77,61 @@ export async function executeCommandStreamed(
   args: string[] = [],
   onChunk?: (chunk: string) => void
 ): Promise<CommandResult> {
-  console.error(chalk.blue('Executing (streamed):'), file, args.join(' '));
+  const exe = resolveExecutable(file);
+  maybeLog(chalk.blue('Executing (streamed):'), exe, args.join(' '));
 
-  return new Promise<CommandResult>((resolve, reject) => {
-    const child = spawn(file, args, { shell: false });
-    let stdout = '';
-    let stderr = '';
+  return await withTimeout(
+    new Promise<CommandResult>((resolve, reject) => {
+      const child = spawn(exe, args, { shell: false });
+      let stdout = '';
+      let stderr = '';
 
-    // Ensure strings
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
+      // Ensure strings
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
 
-    child.stdout.on('data', (d: string) => {
-      stdout += d;
-      try {
-        onChunk?.(d);
-      } catch (e) {
-        // Non-fatal: continue running even if onChunk throws.
-        console.error(chalk.yellow('onChunk error:'), e);
-      }
-    });
+      child.stdout.on('data', (d: string) => {
+        stdout += d;
+        try {
+          onChunk?.(d);
+        } catch (e) {
+          // Non-fatal: continue running even if onChunk throws.
+          maybeLog(chalk.yellow('onChunk error:'), e);
+        }
+      });
 
-    child.stderr.on('data', (d: string) => {
-      stderr += d;
-    });
+      child.stderr.on('data', (d: string) => {
+        stderr += d;
+      });
 
-    child.on('error', (err) => {
-      reject(
-        new CommandExecutionError(
-          [file, ...args].join(' '),
-          'Spawn failed',
-          err
-        )
-      );
-    });
-
-    child.on('close', (code) => {
-      if (stderr) {
-        console.error(chalk.yellow('Command stderr:'), stderr);
-      }
-      if (code === 0) {
-        resolve({ stdout, stderr });
-      } else {
+      child.on('error', (err) => {
         reject(
           new CommandExecutionError(
-            [file, ...args].join(' '),
-            `Exited with code ${code}`,
-            stderr || code
+            [exe, ...args].join(' '),
+            'Spawn failed',
+            err
           )
         );
-      }
-    });
-  });
+      });
+
+      child.on('close', (code) => {
+        if (stderr) {
+          maybeLog(chalk.yellow('Command stderr:'), stderr);
+        }
+        if (code === 0) {
+          resolve({ stdout, stderr });
+        } else {
+          reject(
+            new CommandExecutionError(
+              [exe, ...args].join(' '),
+              `Exited with code ${code}`,
+              stderr || code
+            )
+          );
+        }
+      });
+    }),
+    getTimeoutMs(),
+    [exe, ...args].join(' ')
+  );
 }

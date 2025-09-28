@@ -10,12 +10,14 @@ await jest.unstable_mockModule('../../utils/command.js', () => ({
   executeCommandStreamed: mockExecuteCommandStreamed,
 }));
 
-const {
-  CodexToolHandler,
-  ListSessionsToolHandler,
-  PingToolHandler,
-  HelpToolHandler,
-} = await import('../handlers.js');
+let CodexToolHandler: any;
+let ListSessionsToolHandler: any;
+let PingToolHandler: any;
+let HelpToolHandler: any;
+
+beforeAll(async () => {
+  ({ CodexToolHandler, ListSessionsToolHandler, PingToolHandler, HelpToolHandler } = await import('../handlers.js'));
+});
 
 describe('CodexToolHandler (light integration)', () => {
   beforeEach(() => {

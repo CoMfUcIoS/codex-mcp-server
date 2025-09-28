@@ -1,4 +1,9 @@
-import { CursorStore } from '../cursorStore';
+import {
+  CursorStore,
+  advanceChunk,
+  saveChunk,
+  peekChunk,
+} from '../cursorStore';
 
 describe('CursorStore', () => {
   it('should set and get cursor', () => {
@@ -17,5 +22,19 @@ describe('CursorStore', () => {
     store.set('session1', 'cursor1');
     store.clear();
     expect(store.get('session1')).toBeUndefined();
+  });
+});
+
+describe('advanceChunk and gc', () => {
+  it('removes expired entries via gc', () => {
+    const id = saveChunk('abc');
+    const store = new CursorStore();
+    store.set(id, { remaining: 'abc', expiresAt: Date.now() - 1000 });
+    advanceChunk(id, 1);
+    expect(peekChunk(id)).toBeUndefined();
+  });
+
+  it('returns early if cursor does not exist', () => {
+    expect(() => advanceChunk('notfound', 1)).not.toThrow();
   });
 });
