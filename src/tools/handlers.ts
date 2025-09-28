@@ -24,6 +24,7 @@ import {
   makeRunId,
   buildPromptWithSentinels,
   stripEchoesAndMarkers,
+  sanitizePrompt,
 } from '../utils/promptSanitizer.js';
 import os from 'os';
 
@@ -138,6 +139,8 @@ export class CodexToolHandler {
         );
       }
 
+      const sanitizedPrompt = sanitizePrompt(cleanPrompt);
+
       // Model selection aligned to your Codex CLI build
       // Map UI-friendly labels like "gpt-5 medium" into base model + reasoning effort
       const requestedModel = model ?? 'gpt-5 medium';
@@ -182,7 +185,7 @@ export class CodexToolHandler {
       const effectivePrompt = this.buildPromptWithSentinels(
         runId,
         stitched,
-        cleanPrompt
+        sanitizedPrompt
       );
 
       // CLI args (note: spaces in model id are OK; we pass as one arg)
@@ -212,7 +215,7 @@ export class CodexToolHandler {
 
       if (output.length <= pageLen) {
         if (sessionId) {
-          this.appendTurn(sessionId, 'user', cleanPrompt);
+          this.appendTurn(sessionId, 'user', sanitizedPrompt);
           this.appendTurn(sessionId, 'assistant', output);
         }
         return {
@@ -225,7 +228,7 @@ export class CodexToolHandler {
       const tail = output.slice(pageLen);
       const meta = { nextPageToken: this.saveChunk(tail) };
       if (sessionId) {
-        this.appendTurn(sessionId, 'user', cleanPrompt);
+        this.appendTurn(sessionId, 'user', sanitizedPrompt);
         this.appendTurn(sessionId, 'assistant', output);
       }
       const res: ToolResult = {
@@ -311,6 +314,9 @@ export class PingToolHandler {
             text: message,
           },
         ],
+        meta: {
+          serverVersion: process.env.CODEX_MCP_SERVER_VERSION,
+        },
       };
     } catch (error) {
       if (error instanceof ZodError) {
@@ -461,10 +467,6 @@ export class HelpToolHandler {
     } catch (error) {
       if (error instanceof ZodError) {
         throw new ValidationError(TOOLS.HELP, error.message);
-      }
-      console.error('[HelpToolHandler] Error executing help command:', error);
-      if (error instanceof Error && error.stack) {
-        console.error('[HelpToolHandler] Stack trace:', error.stack);
       }
       throw new ToolExecutionError(
         TOOLS.HELP,

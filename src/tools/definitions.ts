@@ -24,7 +24,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.LIST_MODELS,
     description:
-      'List Codex CLI models discovered from ~/.codex/config.(toml|yaml|json). Use this to see the models your local CLI is configured for.',
+      'List Codex CLI models discovered from ~/.codex/config.(toml|yaml|json). Use this to see models your local CLI is configured for.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -34,7 +34,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.CODEX,
     description:
-      'Run the Codex CLI in non-interactive mode for code analysis, generation, or explanation. Supports conversational context (via sessionId), pagination, and intelligent model selection. If `model` is omitted, the server uses a Codex-compatible default.\n\nModels supported by your Codex CLI:\n- gpt-5 minimal (fast)\n- gpt-5 low (balanced speed)\n- gpt-5 medium (default)\n- gpt-5 high (deeper reasoning)\n\nParameters:\n- prompt (string, optional): The coding task or question.\n- sessionId (string, optional): Stable ID for conversational context.\n- resetSession (boolean, optional): Clear the session.\n- pageSize (number, optional): Approx chars per page (default 40000).\n- pageToken (string, optional): Next page cursor.\n- model (string, optional): One of the Codex CLI model ids above.\n- image (string|string[], optional): Paths to images.\n- approvalPolicy / sandbox / workingDirectory / baseInstructions: Advanced CLI options.',
+      'Run the Codex CLI in non-interactive mode for code analysis, generation, or explanation. Supports conversational context (via sessionId), pagination, image input, and model control. If `model` is omitted, the server defaults to "gpt-5 medium". Use `listModels` to discover locally configured models.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -66,10 +66,11 @@ export const toolDefinitions: ToolDefinition[] = [
         model: {
           type: 'string',
           description:
-            'Model id for Codex CLI. Examples: "gpt-5 medium", "gpt-5 high".',
+            'Model id for Codex CLI, e.g. "gpt-5 minimal|low|medium|high".',
         },
         image: {
-          type: ['string', 'array'],
+          // JSON Schema union
+          type: ['string', 'array'] as any,
           description:
             'Path(s) to image file(s) to analyze or explain. Passed to Codex CLI as --image.',
         },
@@ -99,7 +100,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.LIST_SESSIONS,
     description:
-      'List all currently active sessionIds managed by the server (subject to TTL).',
+      'List all active sessions with metadata (sessionId, turns, bytes, createdAt, lastUsedAt, expiresAt).',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -108,7 +109,8 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: TOOLS.PING,
-    description: 'Test MCP server connection',
+    description:
+      'Test MCP server connection. Echoes your message and includes server version in meta.',
     inputSchema: {
       type: 'object',
       properties: {
