@@ -533,23 +533,31 @@
 
 
 <h1 id="codex-mcp-server">Codex MCP Server<a class="headerlink" href="#codex-mcp-server" title="Permanent link">&para;</a></h1>
-<p><strong>MCP server wrapper for OpenAI Codex CLI that enables Claude Code to leverage Codex's AI capabilities directly.</strong></p>
+<p><strong>MCP server wrapper for the OpenAI Codex CLI. Enable Claude Code (and other MCP clients) to use Codex locally via stdio.</strong></p>
 <div class="highlight"><pre><span></span><code>graph LR
-    A[Claude Code] --&gt; B[Codex MCP Server]
-    B --&gt; C[codex tool]
-    B --&gt; H[listSessions tool]
-    B --&gt; D[ping tool]
-    B --&gt; E[help tool]
+    A[Claude Code / MCP Client] --&gt; B[Codex MCP Server]
+    B --&gt; C[codex]
+    B --&gt; L[listTools]
+    B --&gt; S[listSessions]
+    B --&gt; X[deleteSession]
+    B --&gt; T[sessionStats]
+    B --&gt; P[ping]
+    B --&gt; H[help]
+    B --&gt; M[listModels]
     C --&gt; F[Codex CLI]
     F --&gt; G[OpenAI API]
     style A fill:#FF6B35
     style B fill:#4A90E2
     style C fill:#00D4AA
-    style D fill:#00D4AA
-    style E fill:#00D4AA
+    style L fill:#00D4AA
+    style S fill:#00D4AA
+    style X fill:#00D4AA
+    style T fill:#00D4AA
+    style P fill:#00D4AA
+    style H fill:#00D4AA
+    style M fill:#00D4AA
     style F fill:#FFA500
     style G fill:#FF9500
-    style H fill:#00D4AA
 </code></pre></div>
 <div class="grid cards" markdown>
 
@@ -561,13 +569,13 @@
 
 -   :gear: **MCP tools**
     ---
-    `codex`, `listSessions`, `ping`, `help`
+    `codex`, `listTools`, `listSessions`, `deleteSession`, `sessionStats`, `listModels`, `ping`, `help`
 
 -   :shield: **Requirements**
     ---
-    - OpenAI Codex CLI (`npm i -g @openai/codex` or `brew install codex`)
-    - `codex login` or `OPENAI_API_KEY` set
-    - Claude Code or an MCP‑compatible client
+    - Codex CLI (`npm i -g @openai/codex` or `brew install codex`)
+    - `codex login` or `OPENAI_API_KEY`
+    - Node ≥ 18.18
 
 </div>
 

@@ -377,13 +377,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#codex-tool-parameters" class="md-nav__link">
+  <a href="#codex-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      Codex tool parameters
+      Codex parameters
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Codex tool parameters">
+    <nav class="md-nav" aria-label="Codex parameters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -395,8 +395,26 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error format
+    </span>
+  </a>
   
 </li>
       
@@ -598,13 +616,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#codex-tool-parameters" class="md-nav__link">
+  <a href="#codex-parameters" class="md-nav__link">
     <span class="md-ellipsis">
-      Codex tool parameters
+      Codex parameters
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Codex tool parameters">
+    <nav class="md-nav" aria-label="Codex parameters">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -616,8 +634,26 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error format
+    </span>
+  </a>
   
 </li>
       
@@ -644,11 +680,14 @@
 <h2 id="tools-overview">Tools overview<a class="headerlink" href="#tools-overview" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>codex</strong> — run the Codex CLI non‑interactively. Optional conversational context via <code>sessionId</code>.</li>
-<li><strong>listSessions</strong> — list active session IDs (managed in‑memory with TTL).</li>
-<li><strong>ping</strong> — echo test.</li>
-<li><strong>help</strong> — <code>codex --help</code> output passthrough.</li>
+<li><strong>listSessions</strong> — list all active sessions with metadata (sessionId, turns, bytes, timestamps).</li>
+<li><strong>deleteSession</strong> — delete/expire a session by sessionId.</li>
+<li><strong>sessionStats</strong> — get statistics and metadata for a session.</li>
+<li><strong>listModels</strong> — list models discovered from local <code>~/.codex</code> config.</li>
+<li><strong>listTools</strong> — machine‑readable tool &amp; schema list.</li>
+<li><strong>ping</strong>, <strong>help</strong> — utilities.</li>
 </ul>
-<h2 id="codex-tool-parameters">Codex tool parameters<a class="headerlink" href="#codex-tool-parameters" title="Permanent link">&para;</a></h2>
+<h2 id="codex-parameters">Codex parameters<a class="headerlink" href="#codex-parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -675,7 +714,7 @@
 <td><code>pageToken</code></td>
 <td>string</td>
 <td>—</td>
-<td>From previous paged response.</td>
+<td>Use token from previous paged response.</td>
 </tr>
 <tr>
 <td><code>sessionId</code></td>
@@ -689,21 +728,71 @@
 <td>false</td>
 <td>Clears given <code>sessionId</code> before running.</td>
 </tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>gpt-5 medium</td>
+<td>One of: <code>gpt-5 minimal</code>, <code>gpt-5 low</code>, <code>gpt-5 medium</code>, <code>gpt-5 high</code>.</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>string or string[]</td>
+<td>—</td>
+<td>Path(s) to image files for code/diagram analysis.</td>
+</tr>
+<tr>
+<td><code>approvalPolicy</code></td>
+<td>string</td>
+<td>—</td>
+<td>Advanced—passed to Codex CLI <code>--approval-policy</code>.</td>
+</tr>
+<tr>
+<td><code>sandbox</code></td>
+<td>boolean</td>
+<td>false</td>
+<td>Advanced—Codex CLI <code>--sandbox</code>.</td>
+</tr>
+<tr>
+<td><code>workingDirectory</code></td>
+<td>string</td>
+<td>—</td>
+<td>Advanced—Codex CLI <code>--working-directory</code>.</td>
+</tr>
+<tr>
+<td><code>baseInstructions</code></td>
+<td>string</td>
+<td>—</td>
+<td>Advanced—Codex CLI <code>--base-instructions</code>.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
-<p><strong>Single‑shot</strong>
+<p><strong>Single‑shot</strong></p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Explain this TypeScript function&quot;</span><span class="w"> </span><span class="p">}</span>
-</code></pre></div></p>
-<p><strong>Paging through large output</strong>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Summarize this repository in depth&quot;</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
-<em>Response includes</em> <code>{ "nextPageToken": "abc..." }</code> → call again:
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pageToken&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pageSize&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">40000</span><span class="w"> </span><span class="p">}</span>
-</code></pre></div></p>
-<p><strong>Conversational</strong>
+<p><strong>Paging through large output</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Summarize this repository in depth&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pageSize&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><em>Response includes</em> <code>{ "meta": { "nextPageToken": "abc..." } }</code> → call again:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pageToken&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc...&quot;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><strong>Conversational</strong></p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;sessionId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;issue-123&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Draft tests for utils/sessionStore.ts&quot;</span><span class="w"> </span><span class="p">}</span>
-</code></pre></div></p>
+</code></pre></div>
+<p><strong>Explicit model</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Write a Python script&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-5 high&quot;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h3 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Page tokens expire ~10 minutes after the last use.</li>
+<li>Sessions expire after <code>CODEX_SESSION_TTL_MS</code> and trim once transcripts exceed <code>CODEX_SESSION_MAX_BYTES</code>.</li>
+</ul>
+<h2 id="error-format">Error format<a class="headerlink" href="#error-format" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;isError&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Missing required &#39;prompt&#39; (or provide a &#39;pageToken&#39;).&quot;</span><span class="w"> </span><span class="p">}]</span>
+<span class="p">}</span>
+</code></pre></div>
 
 
 

@@ -535,14 +535,22 @@
 
 
 <h1 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h1>
-<p><strong>Is this server stateful?</strong><br />
-Only if you pass <code>sessionId</code>. Otherwise, each call is stateless.</p>
-<p><strong>Can I run this without exposing an HTTP port?</strong><br />
-Yes—stdio transport only.</p>
-<p><strong>Does it support tool discovery?</strong><br />
-Yes—<code>ListTools</code> returns schemas for all tools.</p>
+<p><strong>Does it auto‑select a model?</strong><br />
+If you don’t specify <code>model</code>, the server uses <code>"gpt-5 medium"</code>. You can override with <code>"gpt-5 minimal|low|medium|high"</code>.</p>
+<p><strong>Can I resume an interactive Codex CLI session?</strong><br />
+This server runs Codex non‑interactively per request (with optional <code>sessionId</code> memory). There is <strong>no separate <code>resume</code> tool</strong>.</p>
+<p><strong>Is the server stateful?</strong><br />
+Only when you pass <code>sessionId</code>. Otherwise, each call is stateless.</p>
+<p><strong>Do I need to open a port?</strong><br />
+No. The server uses <strong>stdio</strong> (MCP).</p>
+<p><strong>Tool discovery?</strong><br />
+Yes—<code>listTools</code> returns all tools and their JSON schemas.</p>
 <p><strong>How do I clear a session?</strong><br />
-Call <code>codex</code> with <code>{ "sessionId": "id", "resetSession": true, "prompt": "..." }</code>.</p>
+Use <code>deleteSession</code> with <code>{ "sessionId": "..." }</code> or call <code>codex</code> with <code>{ "sessionId": "id", "resetSession": true, "prompt": "..." }</code>.</p>
+<p><strong>How do I get session statistics?</strong><br />
+Use <code>sessionStats</code> with <code>{ "sessionId": "..." }</code>.</p>
+<p><strong>How do I list all sessions with metadata?</strong><br />
+Use <code>listSessions</code>.</p>
 
 
 
