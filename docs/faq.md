@@ -1,28 +1,25 @@
 # FAQ
 
-**Does it support intelligent model selection?**  
-Yes—if you do not specify a model, the server will analyze your prompt and choose the best model for your task.
+**Does it auto‑select a model?**  
+If you don’t specify `model`, the server uses `"gpt-5 medium"`. You can override with `"gpt-5 minimal|low|medium|high"`.
 
-**Can I resume a previous Codex CLI session?**  
-Yes—use the `resume` tool to invoke `codex resume` and continue a previous session.
+**Can I resume an interactive Codex CLI session?**  
+This server runs Codex non‑interactively per request (with optional `sessionId` memory). There is **no separate `resume` tool**.
 
-**Is this server stateful?**  
-Only if you pass `sessionId`. Otherwise, each call is stateless.
+**Is the server stateful?**  
+Only when you pass `sessionId`. Otherwise, each call is stateless.
 
-**Can I run this without exposing an HTTP port?**  
-Yes—stdio transport only.
+**Do I need to open a port?**  
+No. The server uses **stdio** (MCP).
 
-**Does it support tool discovery?**  
-Yes—`ListTools` returns schemas for all tools.
+**Tool discovery?**  
+Yes—`listTools` returns all tools and their JSON schemas.
 
 **How do I clear a session?**  
-Call `codex` with `{ "sessionId": "id", "resetSession": true, "prompt": "..." }`.
+Use `deleteSession` with `{ "sessionId": "..." }` or call `codex` with `{ "sessionId": "id", "resetSession": true, "prompt": "..." }`.
 
-**How do I delete a session?**  
-Use the `deleteSession` tool with `{ "sessionId": "your-session-id" }` to remove a session and free resources.
-
-**How do I get statistics for a session?**  
-Use the `sessionStats` tool with `{ "sessionId": "your-session-id" }` to get metadata and statistics for a session.
+**How do I get session statistics?**  
+Use `sessionStats` with `{ "sessionId": "..." }`.
 
 **How do I list all sessions with metadata?**  
-Use the `listSessions` tool to get all active sessions, including sessionId, number of turns, bytes, and timestamps.
+Use `listSessions`.
