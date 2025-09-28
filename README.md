@@ -214,19 +214,6 @@ Advanced options:
   "workingDirectory": "/tmp/safe",
   "baseInstructions": "Always comment code."
 }
-```
-
-### `codex-reply` - Continue a Conversation
-
-Continue a conversation in an existing Codex session:
-
-```json
-{
-  "tool": "codex-reply",
-  "conversationId": "abc123",
-  "prompt": "Add more tests for edge cases."
-}
-```
 
 ### `listSessions` - List Active Sessions
 

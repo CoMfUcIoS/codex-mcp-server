@@ -87,16 +87,6 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
   {
-    name: TOOLS.RESUME,
-    description:
-      'Resume a previous Codex CLI interactive session by invoking `codex resume`. No parameters required. Returns the output from the resumed session.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      required: [],
-    },
-  },
-  {
     name: TOOLS.LIST_SESSIONS,
     description:
       'List all currently active sessionIds managed by the server (subject to TTL).',
@@ -117,15 +107,6 @@ export const toolDefinitions: ToolDefinition[] = [
           description: 'Message to echo back',
         },
       },
-      required: [],
-    },
-  },
-  {
-    name: TOOLS.HELP,
-    description: 'Get Codex CLI help information',
-    inputSchema: {
-      type: 'object',
-      properties: {},
       required: [],
     },
   },
@@ -157,25 +138,6 @@ export const toolDefinitions: ToolDefinition[] = [
         },
       },
       required: ['sessionId'],
-    },
-  },
-  {
-    name: TOOLS.CODEX_REPLY,
-    description:
-      'Continue a Codex CLI conversation by conversationId. Use this to send a new prompt in an ongoing conversation. Parameters: conversationId (string), prompt (string).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        conversationId: {
-          type: 'string',
-          description: 'The conversation/session ID to continue.',
-        },
-        prompt: {
-          type: 'string',
-          description: 'The user message or prompt to send.',
-        },
-      },
-      required: ['conversationId', 'prompt'],
     },
   },
 ];

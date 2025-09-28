@@ -10,8 +10,6 @@ export const TOOLS = {
   LIST_MODELS: 'listModels',
   DELETE_SESSION: 'deleteSession',
   SESSION_STATS: 'sessionStats',
-  RESUME: 'resume',
-  CODEX_REPLY: 'codex-reply',
 } as const;
 
 export const ListToolsToolSchema = z.object({});
@@ -69,12 +67,6 @@ export const HelpToolSchema = z.object({});
 
 export type CodexToolArgs = z.infer<typeof CodexToolSchema>;
 export type PingToolArgs = z.infer<typeof PingToolSchema>;
-
-export const CodexReplyToolSchema = z.object({
-  conversationId: z.string(),
-  prompt: z.string(),
-});
-export type CodexReplyToolArgs = z.infer<typeof CodexReplyToolSchema>;
 
 // Command execution result
 export interface CommandResult {

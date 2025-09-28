@@ -7,8 +7,6 @@ import {
   PingToolSchema,
   HelpToolSchema,
   ListSessionsToolSchema,
-  CodexReplyToolSchema,
-  CodexReplyToolArgs,
 } from '../types.js';
 import { ToolExecutionError, ValidationError } from '../errors.js';
 import { executeCommand, executeCommandStreamed } from '../utils/command.js';
@@ -342,28 +340,6 @@ export class PingToolHandler {
   }
 }
 
-export class ResumeToolHandler {
-  async execute(_args: unknown): Promise<ToolResult> {
-    try {
-      const result = await executeCommand('codex', ['resume']);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: result.stdout || 'No output from codex resume',
-          },
-        ],
-      };
-    } catch (error) {
-      throw new ToolExecutionError(
-        'resume',
-        'Failed to execute codex resume',
-        error
-      );
-    }
-  }
-}
-
 export class ListModelsToolHandler {
   private injectedFs?: typeof import('fs/promises');
   constructor(deps?: Partial<{ fs: typeof import('fs/promises') }>) {
@@ -592,50 +568,13 @@ export class ListToolsToolHandler {
   }
 }
 
-export class CodexReplyToolHandler {
-  private executeCommandStreamed: typeof executeCommandStreamed;
-  constructor(
-    deps?: Partial<{ executeCommandStreamed: typeof executeCommandStreamed }>
-  ) {
-    this.executeCommandStreamed =
-      deps?.executeCommandStreamed ?? executeCommandStreamed;
-  }
-  async execute(args: unknown): Promise<ToolResult> {
-    try {
-      const { conversationId, prompt }: CodexReplyToolArgs =
-        CodexReplyToolSchema.parse(args);
-      const cliArgs = ['reply', '-c', conversationId, prompt];
-      const result = await this.executeCommandStreamed('codex', cliArgs);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: result.stdout || 'No output from Codex reply',
-          },
-        ],
-      };
-    } catch (error) {
-      if (error instanceof ZodError) {
-        throw new ValidationError(TOOLS.CODEX_REPLY, error.message);
-      }
-      throw new ToolExecutionError(
-        TOOLS.CODEX_REPLY,
-        'Failed to execute codex-reply command',
-        error
-      );
-    }
-  }
-}
-
 export const toolHandlers = {
   [TOOLS.CODEX]: new CodexToolHandler(),
   [TOOLS.LIST_SESSIONS]: new ListSessionsToolHandler(),
   [TOOLS.PING]: new PingToolHandler(),
   [TOOLS.LIST_TOOLS]: new ListToolsToolHandler(),
   [TOOLS.HELP]: new HelpToolHandler(),
-  resume: new ResumeToolHandler(),
   [TOOLS.LIST_MODELS]: new ListModelsToolHandler(),
   [TOOLS.DELETE_SESSION]: new DeleteSessionToolHandler(),
   [TOOLS.SESSION_STATS]: new SessionStatsToolHandler(),
-  [TOOLS.CODEX_REPLY]: new CodexReplyToolHandler(),
 } as const;
