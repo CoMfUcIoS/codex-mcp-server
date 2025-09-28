@@ -103,7 +103,6 @@ export class CodexToolHandler {
 
       if (sessionId && resetSession) {
         this.clearSession(sessionId);
-        // do not return here; user may supply a fresh prompt in the same call
       }
 
       // Subsequent page request
@@ -113,7 +112,7 @@ export class CodexToolHandler {
           return {
             content: [
               {
-                type: 'text',
+                type: 'text' as const,
                 text: 'No data found for pageToken (it may have expired).',
               },
             ],
@@ -121,14 +120,13 @@ export class CodexToolHandler {
         }
         const head = remaining.slice(0, pageLen);
         const tail = remaining.slice(pageLen);
-        // advance in-place; keep token stable for idempotent retries
         this.advanceChunk(String(pageToken), head.length);
         const meta = tail.length
           ? { nextPageToken: String(pageToken) }
           : undefined;
         return {
           content: [
-            { type: 'text', text: head },
+            { type: 'text' as const, text: head },
             ...(meta?.nextPageToken
               ? [
                   {
@@ -151,34 +149,37 @@ export class CodexToolHandler {
         );
       }
 
-      // Intelligent model selection
-      let selectedModel = model;
-      if (!selectedModel) {
-        const p = cleanPrompt.toLowerCase();
-        // Use gpt-4o for complex reasoning, code review, or advanced tasks
-        if (
-          /reason|review|analyze|explain|refactor|why|how|describe|architecture|security|test|coverage/.test(
-            p
-          )
-        ) {
-          selectedModel = 'gpt-4o';
-          // Use o4-mini for fast, lightweight, or quick tasks
-        } else if (/quick|fast|mini|lightweight|small|snippet/.test(p)) {
-          selectedModel = 'o4-mini';
-          // Use gpt-3.5-turbo for general coding, TypeScript, React, or frontend
-        } else if (
-          /typescript|react|frontend|ui|component|jsx|tsx|javascript|python|generate|write|implement|create|function|class|api|endpoint/.test(
-            p
-          )
-        ) {
-          selectedModel = 'gpt-3.5-turbo';
-        } else {
-          // Fallback to gpt-3.5-turbo as a safe default
-          selectedModel = 'gpt-3.5-turbo';
-        }
+      // Model selection aligned to your Codex CLI build
+      // Map UI-friendly labels like "gpt-5 medium" into base model + reasoning effort
+      const requestedModel = model ?? 'gpt-5 medium';
+      let baseModel = 'gpt-5';
+      let reasoningEffort: string | undefined;
+
+      const match = requestedModel.match(
+        /^(gpt-5)(?:\s+(minimal|low|medium|high))?$/
+      );
+      if (match) {
+        baseModel = match[1];
+        reasoningEffort = match[2];
       }
 
-      // Build an effective prompt with session context if provided, fenced by sentinels
+      // Allowlist to avoid 400s from unsupported ids
+      const allow = new Set([
+        'gpt-5 minimal',
+        'gpt-5 low',
+        'gpt-5 medium',
+        'gpt-5 high',
+      ]);
+      if (!allow.has(requestedModel)) {
+        console.error(
+          `[CodexTool] Model "${requestedModel}" not in allowlist, falling back to gpt-5 medium`
+        );
+        baseModel = 'gpt-5';
+        reasoningEffort = 'medium';
+      }
+      const selectedModelMeta = requestedModel;
+
+      // Build prompt with session context
       const prior = sessionId ? (this.getTranscript(sessionId) ?? []) : [];
       const stitched =
         prior.length > 0
@@ -195,65 +196,60 @@ export class CodexToolHandler {
         cleanPrompt
       );
 
-      // Build CLI args
+      // CLI args (note: spaces in model id are OK; we pass as one arg)
       const cliArgs = ['exec'];
-      if (selectedModel) {
-        cliArgs.push('-m', selectedModel);
+      cliArgs.push('-m', baseModel);
+      if (reasoningEffort) {
+        cliArgs.push('-c', `model_reasoning_effort=${reasoningEffort}`);
       }
 
-      // Add image input if provided
       if (image) {
         const images = Array.isArray(image) ? image : [image];
         cliArgs.push('--image', images.join(','));
       }
-
-      // Add advanced CLI options if provided
-      if (approvalPolicy) {
-        cliArgs.push('--approval-policy', approvalPolicy);
-      }
-      if (sandbox) {
-        cliArgs.push('--sandbox');
-      }
-      if (workingDirectory) {
+      if (approvalPolicy) cliArgs.push('--approval-policy', approvalPolicy);
+      if (sandbox) cliArgs.push('--sandbox');
+      if (workingDirectory)
         cliArgs.push('--working-directory', workingDirectory);
-      }
-      if (baseInstructions) {
+      if (baseInstructions)
         cliArgs.push('--base-instructions', baseInstructions);
-      }
 
       cliArgs.push(effectivePrompt);
 
-      // Use streamed execution to avoid maxBuffer and handle very large outputs.
       const result = await this.executeCommandStreamed('codex', cliArgs);
 
-      // Strip any echoed context/prompt and sentinels to return only the new answer
       const outputRaw = result.stdout || 'No output from Codex';
       const output = this.stripEchoesAndMarkers(runId, stitched, outputRaw);
 
       if (output.length <= pageLen) {
-        // Append turns to session after successful run (if enabled)
         if (sessionId) {
           this.appendTurn(sessionId, 'user', cleanPrompt);
           this.appendTurn(sessionId, 'assistant', output);
         }
-        return { content: [{ type: 'text', text: output }] };
+        return {
+          content: [{ type: 'text' as const, text: output }],
+          meta: { model: selectedModelMeta },
+        };
       }
 
       const head = output.slice(0, pageLen);
       const tail = output.slice(pageLen);
       const meta = { nextPageToken: this.saveChunk(tail) };
-      // Append full output to session (not only the head), so future context is complete
       if (sessionId) {
         this.appendTurn(sessionId, 'user', cleanPrompt);
         this.appendTurn(sessionId, 'assistant', output);
       }
-      return {
+      const res: ToolResult = {
         content: [
-          { type: 'text', text: head },
-          { type: 'text', text: `{"nextPageToken":"${meta.nextPageToken}"}` },
+          { type: 'text' as const, text: head },
+          {
+            type: 'text' as const,
+            text: `{"nextPageToken":"${meta.nextPageToken}"}`,
+          },
         ],
-        meta,
+        meta: { ...meta, model: selectedModelMeta },
       };
+      return res;
     } catch (error) {
       if (error instanceof ZodError) {
         throw new ValidationError(TOOLS.CODEX, error.message);
@@ -273,7 +269,6 @@ export class ListSessionsToolHandler {
     this.listSessionMeta =
       deps?.listSessionMeta ??
       (async () => {
-        // fallback to dynamic import for prod
         const mod = await import('../utils/sessionStore.js');
         return mod.listSessionMeta();
       });
@@ -283,7 +278,9 @@ export class ListSessionsToolHandler {
       ListSessionsToolSchema.parse(args);
       const meta = await this.listSessionMeta();
       if (!meta.length) {
-        return { content: [{ type: 'text', text: 'No active sessions.' }] };
+        return {
+          content: [{ type: 'text' as const, text: 'No active sessions.' }],
+        };
       }
       const text = meta
         .map(
@@ -301,7 +298,7 @@ export class ListSessionsToolHandler {
         )
         .filter(Boolean)
         .join('\n');
-      return { content: [{ type: 'text', text }] };
+      return { content: [{ type: 'text' as const, text }] };
     } catch (error) {
       if (error instanceof ZodError) {
         throw new ValidationError(TOOLS.LIST_SESSIONS, error.message);
@@ -327,7 +324,7 @@ export class PingToolHandler {
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: message,
           },
         ],
@@ -348,12 +345,11 @@ export class PingToolHandler {
 export class ResumeToolHandler {
   async execute(_args: unknown): Promise<ToolResult> {
     try {
-      // Call 'codex resume' and return output
       const result = await executeCommand('codex', ['resume']);
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: result.stdout || 'No output from codex resume',
           },
         ],
@@ -378,7 +374,6 @@ export class ListModelsToolHandler {
 
   async execute(_args: unknown): Promise<ToolResult> {
     const fs = this.injectedFs ?? (await import('fs/promises'));
-    // Search for config files in order: TOML, YAML, JSON
     const configPaths = [
       `${os.homedir()}/.codex/config.toml`,
       `${os.homedir()}/.codex/config.yaml`,
@@ -403,11 +398,11 @@ export class ListModelsToolHandler {
           }
         } catch (err) {
           parseError = { path, error: err };
-          continue; // Try next config file
+          continue;
         }
-        break; // Successfully parsed
+        break;
       } catch {
-        // File not found, try next
+        // not found; continue
       }
     }
     if (!config) {
@@ -415,7 +410,7 @@ export class ListModelsToolHandler {
         return {
           content: [
             {
-              type: 'text',
+              type: 'text' as const,
               text: `Failed to parse Codex config file at ${parseError.path}: ${parseError.error?.message || parseError.error}`,
             },
           ],
@@ -425,7 +420,7 @@ export class ListModelsToolHandler {
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: 'No Codex config file found in ~/.codex (config.toml, config.yaml, config.json). Please create one to enable dynamic model listing.',
           },
         ],
@@ -433,9 +428,7 @@ export class ListModelsToolHandler {
       };
     }
 
-    // Extract models from config
     const models: { name: string; description?: string }[] = [];
-    // 1. Top-level model
     if (config.model) {
       models.push({
         name: config.model,
@@ -444,7 +437,6 @@ export class ListModelsToolHandler {
           : undefined,
       });
     }
-    // 2. Profiles (TOML: [profiles], YAML/JSON: profiles)
     const profiles =
       config.profiles ||
       (config.profiles === undefined && config['[profiles]']);
@@ -458,13 +450,15 @@ export class ListModelsToolHandler {
         ) {
           models.push({
             name: (profile as any).model,
-            description: `Profile: ${profileName}${(profile as any).model_provider ? `, Provider: ${(profile as any).model_provider}` : ''}`,
+            description: `Profile: ${profileName}${
+              (profile as any).model_provider
+                ? `, Provider: ${(profile as any).model_provider}`
+                : ''
+            }`,
           });
         }
       }
     }
-    // 3. Providers (optional, for extra info)
-    // 4. Remove duplicates
     const uniqueModels = Array.from(
       new Map(models.map((m) => [m.name, m])).values()
     );
@@ -472,7 +466,7 @@ export class ListModelsToolHandler {
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: 'No models found in Codex config file.',
           },
         ],
@@ -482,7 +476,7 @@ export class ListModelsToolHandler {
     const text = uniqueModels
       .map((m) => `- ${m.name}${m.description ? ': ' + m.description : ''}`)
       .join('\n');
-    return { content: [{ type: 'text', text }] };
+    return { content: [{ type: 'text' as const, text }] };
   }
 }
 
@@ -500,7 +494,7 @@ export class HelpToolHandler {
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: result.stdout || 'No help information available',
           },
         ],
@@ -509,7 +503,6 @@ export class HelpToolHandler {
       if (error instanceof ZodError) {
         throw new ValidationError(TOOLS.HELP, error.message);
       }
-      // Log the error details for debugging
       console.error('[HelpToolHandler] Error executing help command:', error);
       if (error instanceof Error && error.stack) {
         console.error('[HelpToolHandler] Stack trace:', error.stack);
@@ -539,7 +532,9 @@ export class DeleteSessionToolHandler {
       }
       this.clearSession(sessionId);
       return {
-        content: [{ type: 'text', text: `Session ${sessionId} deleted.` }],
+        content: [
+          { type: 'text' as const, text: `Session ${sessionId} deleted.` },
+        ],
       };
     } catch (error) {
       throw new ToolExecutionError(
@@ -566,11 +561,13 @@ export class SessionStatsToolHandler {
       const meta = this.getSessionMeta(sessionId);
       if (!meta) {
         return {
-          content: [{ type: 'text', text: `Session ${sessionId} not found.` }],
+          content: [
+            { type: 'text' as const, text: `Session ${sessionId} not found.` },
+          ],
         };
       }
       const text = `Session ${sessionId}:\nturns=${meta.turns}\nbytes=${meta.bytes}\ncreatedAt=${new Date(meta.createdAt).toISOString()}\nlastUsedAt=${new Date(meta.lastUsedAt).toISOString()}\nexpiresAt=${new Date(meta.expiresAt).toISOString()}`;
-      return { content: [{ type: 'text', text }] };
+      return { content: [{ type: 'text' as const, text }] };
     } catch (error) {
       throw new ToolExecutionError(
         TOOLS.SESSION_STATS,
@@ -587,7 +584,7 @@ export class ListToolsToolHandler {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(toolDefinitions, null, 2),
         },
       ],
@@ -611,7 +608,10 @@ export class CodexReplyToolHandler {
       const result = await this.executeCommandStreamed('codex', cliArgs);
       return {
         content: [
-          { type: 'text', text: result.stdout || 'No output from Codex reply' },
+          {
+            type: 'text' as const,
+            text: result.stdout || 'No output from Codex reply',
+          },
         ],
       };
     } catch (error) {

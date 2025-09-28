@@ -14,7 +14,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.LIST_MODELS,
     description:
-      'List all available Codex models and their descriptions.\n\nCurrent OpenAI Codex CLI models supported:\n- gpt-4o: Best for complex reasoning, code review, and advanced tasks.\n- gpt-3.5-turbo: General coding, TypeScript, React, and most programming tasks.\n- o4-mini: Fast, lightweight, and quick tasks.\n\nYou can set the model explicitly with the `model` parameter, or let the server intelligently select the best model based on your prompt.',
+      'List Codex CLI models and their descriptions.\n\nCurrent Codex CLI model ids (as your build reports):\n- gpt-5 minimal — fastest, limited reasoning\n- gpt-5 low — some reasoning, still quick\n- gpt-5 medium — balanced default\n- gpt-5 high — deepest reasoning\n\nYou can set the model via the `model` parameter, or let the server auto-select.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -24,7 +24,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.CODEX,
     description:
-      'Run the Codex CLI in non-interactive mode for code analysis, generation, or explanation. Supports conversational context (via sessionId), output pagination, and intelligent model selection. If the `model` parameter is omitted, the server will analyze the prompt and auto-select the best model for the task.\n\nCurrent OpenAI Codex CLI models supported:\n- gpt-4o: Best for complex reasoning, code review, and advanced tasks.\n- gpt-3.5-turbo: General coding, TypeScript, React, and most programming tasks.\n- o4-mini: Fast, lightweight, and quick tasks.\n\nParameters:\n- prompt (string, optional): The coding task, question, or analysis request.\n- sessionId (string, optional): Stable ID for conversational context.\n- resetSession (boolean, optional): If true, clears the session for the given sessionId.\n- pageSize (number, optional): Approximate characters per page (default 40000).\n- pageToken (string, optional): Token to fetch the next page of output.\n- model (string, optional): Model name for Codex CLI. If omitted, the server will auto-select based on the prompt.\n\nExample (explicit model):\n  { "prompt": "Write a Python script", "model": "gpt-3.5-turbo" }\nExample (auto-selection):\n  { "prompt": "Review this code for security issues" }',
+      'Run the Codex CLI in non-interactive mode for code analysis, generation, or explanation. Supports conversational context (via sessionId), pagination, and intelligent model selection. If `model` is omitted, the server uses a Codex-compatible default.\n\nModels supported by your Codex CLI:\n- gpt-5 minimal (fast)\n- gpt-5 low (balanced speed)\n- gpt-5 medium (default)\n- gpt-5 high (deeper reasoning)\n\nParameters:\n- prompt (string, optional): The coding task or question.\n- sessionId (string, optional): Stable ID for conversational context.\n- resetSession (boolean, optional): Clear the session.\n- pageSize (number, optional): Approx chars per page (default 40000).\n- pageToken (string, optional): Next page cursor.\n- model (string, optional): One of the Codex CLI model ids above.\n- image (string|string[], optional): Paths to images.\n- approvalPolicy / sandbox / workingDirectory / baseInstructions: Advanced CLI options.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -56,7 +56,7 @@ export const toolDefinitions: ToolDefinition[] = [
         model: {
           type: 'string',
           description:
-            'Model name for Codex CLI. If omitted, the server will intelligently select a model based on the prompt.',
+            'Model id for Codex CLI. Examples: "gpt-5 medium", "gpt-5 high".',
         },
         image: {
           type: ['string', 'array'],
@@ -89,7 +89,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: TOOLS.RESUME,
     description:
-      'Resume a previous Codex CLI interactive session by invoking `codex resume`. No parameters required. Returns the output from the resumed session.\n\nExample:\n  { "tool": "resume" }',
+      'Resume a previous Codex CLI interactive session by invoking `codex resume`. No parameters required. Returns the output from the resumed session.',
     inputSchema: {
       type: 'object',
       properties: {},
