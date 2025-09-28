@@ -38,7 +38,6 @@ export class CodexMcpServer {
       return { tools: toolDefinitions };
     });
 
-/// <reference types="node" />
     // Call tool handler
     this.server.setRequestHandler(
       CallToolRequestSchema,

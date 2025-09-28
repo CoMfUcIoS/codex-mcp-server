@@ -4,6 +4,8 @@ import chalk from 'chalk';
 import { CommandExecutionError } from '../errors.js';
 import { type CommandResult } from '../types.js';
 
+import { withTimeout } from './timeout.js';
+
 const execFileAsync = promisify(execFile);
 
 export async function executeCommand(
@@ -13,10 +15,14 @@ export async function executeCommand(
   try {
     console.error(chalk.blue('Executing:'), file, args.join(' '));
 
-    const result = await execFileAsync(file, args, {
-      shell: false,
-      maxBuffer: 64 * 1024 * 1024, // 64MB
-    });
+    const result = await withTimeout(
+      execFileAsync(file, args, {
+        shell: false,
+        maxBuffer: 64 * 1024 * 1024, // 64MB
+      }),
+      60000,
+      [file, ...args].join(' ')
+    );
 
     if (result.stderr) {
       console.error(chalk.yellow('Command stderr:'), result.stderr);
@@ -52,54 +58,58 @@ export async function executeCommandStreamed(
 ): Promise<CommandResult> {
   console.error(chalk.blue('Executing (streamed):'), file, args.join(' '));
 
-  return new Promise<CommandResult>((resolve, reject) => {
-    const child = spawn(file, args, { shell: false });
-    let stdout = '';
-    let stderr = '';
+  return await withTimeout(
+    new Promise<CommandResult>((resolve, reject) => {
+      const child = spawn(file, args, { shell: false });
+      let stdout = '';
+      let stderr = '';
 
-    // Ensure strings
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
+      // Ensure strings
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
 
-    child.stdout.on('data', (d: string) => {
-      stdout += d;
-      try {
-        onChunk?.(d);
-      } catch (e) {
-        // Non-fatal: continue running even if onChunk throws.
-        console.error(chalk.yellow('onChunk error:'), e);
-      }
-    });
+      child.stdout.on('data', (d: string) => {
+        stdout += d;
+        try {
+          onChunk?.(d);
+        } catch (e) {
+          // Non-fatal: continue running even if onChunk throws.
+          console.error(chalk.yellow('onChunk error:'), e);
+        }
+      });
 
-    child.stderr.on('data', (d: string) => {
-      stderr += d;
-    });
+      child.stderr.on('data', (d: string) => {
+        stderr += d;
+      });
 
-    child.on('error', (err) => {
-      reject(
-        new CommandExecutionError(
-          [file, ...args].join(' '),
-          'Spawn failed',
-          err
-        )
-      );
-    });
-
-    child.on('close', (code) => {
-      if (stderr) {
-        console.error(chalk.yellow('Command stderr:'), stderr);
-      }
-      if (code === 0) {
-        resolve({ stdout, stderr });
-      } else {
+      child.on('error', (err) => {
         reject(
           new CommandExecutionError(
             [file, ...args].join(' '),
-            `Exited with code ${code}`,
-            stderr || code
+            'Spawn failed',
+            err
           )
         );
-      }
-    });
-  });
+      });
+
+      child.on('close', (code) => {
+        if (stderr) {
+          console.error(chalk.yellow('Command stderr:'), stderr);
+        }
+        if (code === 0) {
+          resolve({ stdout, stderr });
+        } else {
+          reject(
+            new CommandExecutionError(
+              [file, ...args].join(' '),
+              `Exited with code ${code}`,
+              stderr || code
+            )
+          );
+        }
+      });
+    }),
+    60000,
+    [file, ...args].join(' ')
+  );
 }

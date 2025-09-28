@@ -15,6 +15,7 @@ export const TOOLS = {
 export const ListToolsToolSchema = z.object({});
 export type ListToolsToolArgs = z.infer<typeof ListToolsToolSchema>;
 export type ToolName = (typeof TOOLS)[keyof typeof TOOLS];
+export const IdSchema = z.object({ sessionId: z.string().min(1) });
 
 // Tool definition interface
 export interface ToolDefinition {

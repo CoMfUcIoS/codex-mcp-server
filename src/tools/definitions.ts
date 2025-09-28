@@ -12,9 +12,19 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
   {
+    name: TOOLS.HELP,
+    description:
+      'Get Codex CLI help information. Returns the CLI help output for Codex.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: TOOLS.LIST_MODELS,
     description:
-      'List Codex CLI models and their descriptions.\n\nCurrent Codex CLI model ids (as your build reports):\n- gpt-5 minimal — fastest, limited reasoning\n- gpt-5 low — some reasoning, still quick\n- gpt-5 medium — balanced default\n- gpt-5 high — deepest reasoning\n\nYou can set the model via the `model` parameter, or let the server auto-select.',
+      'List Codex CLI models discovered from ~/.codex/config.(toml|yaml|json). Use this to see the models your local CLI is configured for.',
     inputSchema: {
       type: 'object',
       properties: {},

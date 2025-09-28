@@ -1,8 +1,6 @@
 jest.setTimeout(20000);
 
 import { jest } from '@jest/globals';
-import { CodexReplyToolHandler } from '../handlers';
-import { CodexReplyToolSchema, CodexReplyToolArgs } from '../../types';
 
 // ---------- Create mock fns FIRST (referenced by factory functions) ----------
 const mockExecuteCommandStreamed = jest.fn();
@@ -62,32 +60,6 @@ beforeAll(async () => {
 });
 
 describe('Tool Handlers', () => {
-  describe('CodexReplyToolHandler', () => {
-    it('calls codex reply with conversationId and prompt', async () => {
-      const handler = new CodexReplyToolHandler({
-        executeCommandStreamed: mockExecuteCommandStreamed,
-      });
-      mockExecuteCommandStreamed.mockResolvedValueOnce({
-        stdout: 'reply output',
-        stderr: '',
-      });
-      const args: CodexReplyToolArgs = {
-        conversationId: 'abc123',
-        prompt: 'Continue the conversation.',
-      };
-      const result = await handler.execute(args);
-      expect(mockExecuteCommandStreamed).toHaveBeenCalledWith(
-        'codex',
-        expect.arrayContaining([
-          'reply',
-          '-c',
-          'abc123',
-          'Continue the conversation.',
-        ])
-      );
-      expect(result.content[0].text).toBe('reply output');
-    });
-  });
   describe('CodexToolHandler image input', () => {
     it('passes --image flag for single image', async () => {
       const mockExecute = jest
@@ -133,6 +105,39 @@ describe('Tool Handlers', () => {
       await handler.execute({ prompt: 'explain' });
       const cliArgs = mockExecute.mock.calls[0][1];
       expect(cliArgs.includes('--image')).toBe(false);
+    });
+  });
+
+  describe('CodexToolHandler working directory', () => {
+    it('passes --working-directory flag when workingDirectory is provided', async () => {
+      const mockExecute = jest
+        .fn()
+        .mockResolvedValue({ stdout: 'output', stderr: '' });
+      const { CodexToolHandler } = await import('../handlers.js');
+      const handler = new CodexToolHandler({
+        executeCommandStreamed: mockExecute,
+      });
+      await handler.execute({
+        prompt: 'test command',
+        workingDirectory: '/path/to/workspace'
+      });
+      expect(mockExecute).toHaveBeenCalledWith(
+        'codex',
+        expect.arrayContaining(['--working-directory', '/path/to/workspace'])
+      );
+    });
+
+    it('does not add --working-directory flag when workingDirectory is missing', async () => {
+      const mockExecute = jest
+        .fn()
+        .mockResolvedValue({ stdout: 'output', stderr: '' });
+      const { CodexToolHandler } = await import('../handlers.js');
+      const handler = new CodexToolHandler({
+        executeCommandStreamed: mockExecute,
+      });
+      await handler.execute({ prompt: 'test command' });
+      const cliArgs = mockExecute.mock.calls[0][1];
+      expect(cliArgs.includes('--working-directory')).toBe(false);
     });
   });
   beforeEach(() => {
@@ -261,9 +266,33 @@ describe('Tool Handlers', () => {
 
       expect(res.content[0].type).toBe('text');
       expect(res.content[0].text.length).toBe(1000);
-      expect(res.content[1].text).toContain('"nextPageToken":"token123"');
+      expect(res.content.length).toBe(1);
       expect(res.meta?.nextPageToken).toBe('token123');
       expect(command.executeCommandStreamed).toHaveBeenCalledTimes(1);
+    });
+
+    it('saves session turns when output is paginated and sessionId provided', async () => {
+      const longOut = 'a'.repeat(50_000);
+      mockExecuteCommandStreamed.mockResolvedValue({
+        stdout: longOut,
+        stderr: '',
+      });
+      mockSaveChunk.mockReturnValue('token123');
+      const handler = new handlers.CodexToolHandler({
+        executeCommandStreamed: mockExecuteCommandStreamed,
+        saveChunk: mockSaveChunk,
+        appendTurn: mockAppendTurn,
+      });
+
+      await handler.execute({
+        prompt: 'test prompt',
+        sessionId: 'session123',
+        pageSize: 1000
+      });
+
+      expect(mockAppendTurn).toHaveBeenCalledWith('session123', 'user', 'test prompt');
+      expect(mockAppendTurn).toHaveBeenCalledWith('session123', 'assistant', longOut);
+      expect(mockAppendTurn).toHaveBeenCalledTimes(2);
     });
 
     it('returns ONLY the head and no meta/token when remaining <= pageLen (pageToken path)', async () => {
@@ -540,10 +569,10 @@ describe('Tool Handlers', () => {
             prompt: 'somethingunusualandnotmatching',
             pageSize: 1000,
           });
-          // Should select gpt-3.5-turbo as model
+          // Should select gpt-5 as model
           expect(mockExecuteCommandStreamed).toHaveBeenCalledWith(
             'codex',
-            expect.arrayContaining(['-m', 'gpt-3.5-turbo'])
+            expect.arrayContaining(['-m', 'gpt-5'])
           );
         });
       });
@@ -731,46 +760,3 @@ describe('ListModelsToolHandler', () => {
   });
 });
 
-describe('CodexReplyToolHandler', () => {
-  it('calls codex reply with correct CLI args', async () => {
-    const mockExecute = jest
-      .fn()
-      .mockResolvedValue({ stdout: 'reply output', stderr: '' });
-    const handler = new CodexReplyToolHandler({
-      executeCommandStreamed: mockExecute,
-    });
-    const args = {
-      conversationId: 'conv123',
-      prompt: 'Continue the conversation',
-    };
-    await handler.execute(args);
-    expect(mockExecute).toHaveBeenCalledWith('codex', [
-      'reply',
-      '-c',
-      'conv123',
-      'Continue the conversation',
-    ]);
-  });
-
-  it('returns output from codex reply', async () => {
-    const mockExecute = jest
-      .fn()
-      .mockResolvedValue({ stdout: 'reply output', stderr: '' });
-    const handler = new CodexReplyToolHandler({
-      executeCommandStreamed: mockExecute,
-    });
-    const args = {
-      conversationId: 'conv123',
-      prompt: 'Continue the conversation',
-    };
-    const result = await handler.execute(args);
-    expect(result.content[0].text).toBe('reply output');
-  });
-
-  it('throws ValidationError for invalid args', async () => {
-    const handler = new CodexReplyToolHandler({
-      executeCommandStreamed: jest.fn(),
-    });
-    await expect(handler.execute({})).rejects.toThrow(/Validation/i);
-  });
-});

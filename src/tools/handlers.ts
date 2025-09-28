@@ -7,6 +7,7 @@ import {
   PingToolSchema,
   HelpToolSchema,
   ListSessionsToolSchema,
+  IdSchema,
 } from '../types.js';
 import { ToolExecutionError, ValidationError } from '../errors.js';
 import { executeCommand, executeCommandStreamed } from '../utils/command.js';
@@ -123,17 +124,7 @@ export class CodexToolHandler {
           ? { nextPageToken: String(pageToken) }
           : undefined;
         return {
-          content: [
-            { type: 'text' as const, text: head },
-            ...(meta?.nextPageToken
-              ? [
-                  {
-                    type: 'text' as const,
-                    text: `{"nextPageToken":"${meta.nextPageToken}"}`,
-                  },
-                ]
-              : []),
-          ],
+          content: [{ type: 'text' as const, text: head }],
           ...(meta ? { meta } : {}),
         };
       }
@@ -238,13 +229,7 @@ export class CodexToolHandler {
         this.appendTurn(sessionId, 'assistant', output);
       }
       const res: ToolResult = {
-        content: [
-          { type: 'text' as const, text: head },
-          {
-            type: 'text' as const,
-            text: `{"nextPageToken":"${meta.nextPageToken}"}`,
-          },
-        ],
+        content: [{ type: 'text' as const, text: head }],
         meta: { ...meta, model: selectedModelMeta },
       };
       return res;
@@ -413,9 +398,7 @@ export class ListModelsToolHandler {
           : undefined,
       });
     }
-    const profiles =
-      config.profiles ||
-      (config.profiles === undefined && config['[profiles]']);
+    const profiles = config.profiles;
     if (profiles && typeof profiles === 'object') {
       for (const [profileName, profile] of Object.entries(profiles)) {
         if (
@@ -501,7 +484,7 @@ export class DeleteSessionToolHandler {
   }
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const { sessionId } = args as { sessionId: string };
+      const { sessionId } = IdSchema.parse(args);
       if (!this.clearSession) {
         const { clearSession } = await import('../utils/sessionStore.js');
         this.clearSession = clearSession;
@@ -529,7 +512,7 @@ export class SessionStatsToolHandler {
   }
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
     try {
-      const { sessionId } = args as { sessionId: string };
+      const { sessionId } = IdSchema.parse(args);
       if (!this.getSessionMeta) {
         const { getSessionMeta } = await import('../utils/sessionStore.js');
         this.getSessionMeta = getSessionMeta;
