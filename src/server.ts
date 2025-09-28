@@ -59,7 +59,7 @@ export class CodexMcpServer {
             content: [
               {
                 type: 'text',
-                text: handleError(error, `tool \"${name}\"`),
+                text: handleError(error, `tool "${name}"`),
               },
             ],
             isError: true,

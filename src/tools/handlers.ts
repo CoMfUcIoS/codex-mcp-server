@@ -19,7 +19,6 @@ import {
   appendTurn,
   getTranscript,
   clearSession,
-  listSessionIds,
 } from '../utils/sessionStore.js';
 import { toolDefinitions } from './definitions.js';
 import {
@@ -27,6 +26,10 @@ import {
   buildPromptWithSentinels,
   stripEchoesAndMarkers,
 } from '../utils/promptSanitizer.js';
+import os from 'os';
+
+let toml: typeof import('toml');
+let yaml: typeof import('yaml');
 
 export class CodexToolHandler {
   private executeCommandStreamed: typeof executeCommandStreamed;
@@ -365,11 +368,6 @@ export class ResumeToolHandler {
   }
 }
 
-import fs from 'fs/promises';
-import os from 'os';
-let toml: typeof import('toml');
-let yaml: typeof import('yaml');
-
 export class ListModelsToolHandler {
   private injectedFs?: typeof import('fs/promises');
   constructor(deps?: Partial<{ fs: typeof import('fs/promises') }>) {
@@ -387,7 +385,6 @@ export class ListModelsToolHandler {
       `${os.homedir()}/.codex/config.json`,
     ];
     let config: any = null;
-    let format: 'toml' | 'yaml' | 'json' | null = null;
     let parseError: { path: string; error: any } | null = null;
     let foundConfigFile = false;
     for (const path of configPaths) {
@@ -398,21 +395,18 @@ export class ListModelsToolHandler {
           if (path.endsWith('.toml')) {
             if (!toml) toml = await import('toml');
             config = toml.parse(data);
-            format = 'toml';
           } else if (path.endsWith('.yaml')) {
             if (!yaml) yaml = await import('yaml');
             config = yaml.parse(data);
-            format = 'yaml';
           } else if (path.endsWith('.json')) {
             config = JSON.parse(data);
-            format = 'json';
           }
         } catch (err) {
           parseError = { path, error: err };
           continue; // Try next config file
         }
         break; // Successfully parsed
-      } catch (err) {
+      } catch {
         // File not found, try next
       }
     }
