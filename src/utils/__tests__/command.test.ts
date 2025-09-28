@@ -57,6 +57,8 @@ describe('executeCommandStreamed', () => {
 
   it('logs error details and stack trace when commands fail', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const originalDebug = process.env.DEBUG;
+    process.env.DEBUG = '1'; // Enable debug logging
 
     try {
       // This will fail and trigger the error logging paths
@@ -75,5 +77,6 @@ describe('executeCommandStreamed', () => {
     expect(errorCalls[0][0]).toContain('Command execution error:');
 
     consoleSpy.mockRestore();
+    process.env.DEBUG = originalDebug; // Restore original value
   });
 });

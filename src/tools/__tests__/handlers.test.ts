@@ -31,6 +31,7 @@ await jest.unstable_mockModule('../../utils/promptSanitizer.js', () => ({
   stripEchoesAndMarkers: mockStripEchoesAndMarkers,
   makeRunId: mockMakeRunId,
   buildPromptWithSentinels: mockBuildPromptWithSentinels,
+  sanitizePrompt: jest.fn((prompt) => prompt),
 }));
 
 await jest.unstable_mockModule('../../utils/cursorStore.js', () => ({
