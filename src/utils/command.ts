@@ -40,6 +40,7 @@ export async function executeCommand(
       execFileAsync(exe, args, {
         shell: false,
         maxBuffer: 64 * 1024 * 1024, // 64MB
+        env: { ...process.env, PATH: process.env.PATH },
       }),
       getTimeoutMs(),
       [exe, ...args].join(' ')
@@ -82,7 +83,10 @@ export async function executeCommandStreamed(
 
   return await withTimeout(
     new Promise<CommandResult>((resolve, reject) => {
-      const child = spawn(exe, args, { shell: false });
+      const child = spawn(exe, args, {
+        shell: false,
+        env: { ...process.env, PATH: process.env.PATH },
+      });
       let stdout = '';
       let stderr = '';
 
