@@ -196,8 +196,10 @@ export class CodexToolHandler {
       }
 
       if (image) {
-        const images = Array.isArray(image) ? image : [image];
-        cliArgs.push('--image', images.join(','));
+        const images = Array.isArray(image) ? image.filter((img) => !!img) : [image].filter((img) => !!img);
+        if (images.length > 0) {
+          cliArgs.push('--image', images.join(','));
+        }
       }
       if (approvalPolicy) cliArgs.push('--approval-policy', approvalPolicy);
       if (sandbox) cliArgs.push('--sandbox');
