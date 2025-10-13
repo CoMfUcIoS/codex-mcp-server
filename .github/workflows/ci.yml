@@ -36,7 +36,8 @@ jobs:
         run: npm run format:check
       - name: Lint code
         run: npm run lint
-      - name: Validate server startup
+      - name: Validate server startup (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           timeout 10s npm start || exit_code=$?
           if [ "$exit_code" -ne 124 ] && [ "$exit_code" -ne 0 ]; then
@@ -44,6 +45,17 @@ jobs:
             exit 1
           fi
           echo "Server validation passed"
+      - name: Validate server startup (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $exit_code = 0
+          timeout 10 npm start; if ($LASTEXITCODE -ne 0) { $exit_code = $LASTEXITCODE }
+          if (($exit_code -ne 124) -and ($exit_code -ne 0)) {
+            Write-Host "Server failed to start properly"
+            exit 1
+          }
+          Write-Host "Server validation passed"
   security:
     runs-on: ubuntu-latest
     steps:
