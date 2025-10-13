@@ -49,8 +49,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $exit_code = 0
-          timeout 10 npm start; if ($LASTEXITCODE -ne 0) { $exit_code = $LASTEXITCODE }
+          $process = Start-Process "npm" "start" -PassThru
+          if ($process.WaitForExit(10000)) {
+            $exit_code = $process.ExitCode
+          } else {
+            $process.Kill()
+            $exit_code = 124
+          }
           if (($exit_code -ne 124) -and ($exit_code -ne 0)) {
             Write-Host "Server failed to start properly"
             exit 1
