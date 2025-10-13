@@ -31,20 +31,19 @@ graph LR
 
 <div class="grid cards" markdown>
 
--   :rocket: **One‑click install**
-    ---
-    [VS Code](https://vscode.dev/redirect/mcp/install?name=codex-cli&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40comfucios%2Fcodex-mcp-server%22%5D%7D) ·
-    [VS Code Insiders](https://insiders.vscode.dev/redirect/mcp/install?name=codex-cli&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40comfucios%2Fcodex-mcp-server%22%5D%7D) ·
-    [Cursor](https://cursor.com/en/install-mcp?name=codex&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoibnB4IC15IEBjb21mdWNpb3MvY29kZXgtbWNwLXNlcnZlciIsImVudiI6e319)
+- ## :rocket: **One‑click install**
 
--   :gear: **MCP tools**
-    ---
-    `codex`, `listTools`, `listSessions`, `deleteSession`, `sessionStats`, `listModels`, `ping`, `help`
+  [VS Code](https://vscode.dev/redirect/mcp/install?name=codex-cli&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40comfucios%2Fcodex-mcp-server%22%5D%7D) ·
+  [VS Code Insiders](https://insiders.vscode.dev/redirect/mcp/install?name=codex-cli&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40comfucios%2Fcodex-mcp-server%22%5D%7D) ·
+  [Cursor](https://cursor.com/en/install-mcp?name=codex&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoibnB4IC15IEBjb21mdWNpb3MvY29kZXgtbWNwLXNlcnZlciIsImVudiI6e319)
 
--   :shield: **Requirements**
-    ---
-    - Codex CLI (`npm i -g @openai/codex` or `brew install codex`)
-    - `codex login` or `OPENAI_API_KEY`
-    - Node ≥ 18.18
+- ## :gear: **MCP tools**
+
+  `codex`, `listTools`, `listSessions`, `deleteSession`, `sessionStats`, `listModels`, `ping`, `help`
+
+- ## :shield: **Requirements**
+  - Codex CLI (`npm i -g @openai/codex` or `brew install codex`)
+  - `codex login` or `OPENAI_API_KEY`
+  - Node ≥ 18.18
 
 </div>

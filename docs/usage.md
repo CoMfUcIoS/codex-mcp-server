@@ -12,19 +12,19 @@
 
 ## Codex parameters
 
-| Name               | Type              | Default         | Notes                                                                                  |
-| ------------------ | ----------------- | --------------- | -------------------------------------------------------------------------------------- |
-| `prompt`           | string            | —               | Required on first call (unless paging).                                                |
-| `pageSize`         | number            | 40000           | 1,000–200,000 chars.                                                                   |
-| `pageToken`        | string            | —               | Use token from previous paged response.                                                |
-| `sessionId`        | string            | —               | Enables conversation memory within size limits.                                        |
-| `resetSession`     | boolean           | false           | Clears given `sessionId` before running.                                               |
-| `model`            | string            | gpt-5 medium    | One of: `gpt-5 minimal`, `gpt-5 low`, `gpt-5 medium`, `gpt-5 high`.                    |
-| `image`            | string or string[]| —               | Path(s) to image files for code/diagram analysis.                                      |
-| `approvalPolicy`   | string            | —               | Advanced—passed to Codex CLI `--approval-policy`.                                      |
-| `sandbox`          | boolean           | false           | Advanced—Codex CLI `--sandbox`.                                                        |
-| `workingDirectory` | string            | —               | Advanced—Codex CLI `--working-directory`.                                              |
-| `baseInstructions` | string            | —               | Advanced—Codex CLI `--base-instructions`.                                              |
+| Name               | Type               | Default      | Notes                                                               |
+| ------------------ | ------------------ | ------------ | ------------------------------------------------------------------- |
+| `prompt`           | string             | —            | Required on first call (unless paging).                             |
+| `pageSize`         | number             | 40000        | 1,000–200,000 chars.                                                |
+| `pageToken`        | string             | —            | Use token from previous paged response.                             |
+| `sessionId`        | string             | —            | Enables conversation memory within size limits.                     |
+| `resetSession`     | boolean            | false        | Clears given `sessionId` before running.                            |
+| `model`            | string             | gpt-5 medium | One of: `gpt-5 minimal`, `gpt-5 low`, `gpt-5 medium`, `gpt-5 high`. |
+| `image`            | string or string[] | —            | Path(s) to image files for code/diagram analysis.                   |
+| `approvalPolicy`   | string             | —            | Advanced—passed to Codex CLI `--approval-policy`.                   |
+| `sandbox`          | boolean            | false        | Advanced—Codex CLI `--sandbox`.                                     |
+| `workingDirectory` | string             | —            | Advanced—Codex CLI `--working-directory`.                           |
+| `baseInstructions` | string             | —            | Advanced—Codex CLI `--base-instructions`.                           |
 
 ### Examples
 
@@ -68,7 +68,11 @@ _Response includes_ `{ "meta": { "nextPageToken": "abc..." } }` → call again:
 ```json
 {
   "isError": true,
-  "content": [{ "type": "text", "text": "Missing required 'prompt' (or provide a 'pageToken')." }]
+  "content": [
+    {
+      "type": "text",
+      "text": "Missing required 'prompt' (or provide a 'pageToken')."
+    }
+  ]
 }
 ```
-
