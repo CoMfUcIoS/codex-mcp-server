@@ -8,7 +8,7 @@
       "labels": ["feature", "enhancement"]
     },
     {
-      "title": "## 🐛 Bug Fixes", 
+      "title": "## 🐛 Bug Fixes",
       "labels": ["bug", "fix"]
     },
     {
@@ -20,11 +20,10 @@
       "labels": ["chore", "dependencies", "ci"]
     }
   ],
-  "ignore_labels": [
-    "ignore-for-release"
-  ],
+  "ignore_labels": ["ignore-for-release"],
   "sort": "ASC",
   "max_tags_to_fetch": 200,
   "max_pull_requests": 1000,
   "max_back_track_time_days": 1000
 }
+

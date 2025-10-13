@@ -34,8 +34,8 @@ graph LR
 
 ## Prerequisites
 
-- **OpenAI Codex CLI** installed & configured  
-  - Install: `npm i -g @openai/codex` or `brew install codex`  
+- **OpenAI Codex CLI** installed & configured
+  - Install: `npm i -g @openai/codex` or `brew install codex`
   - Setup: `codex login` or set `OPENAI_API_KEY`
 - **Claude Code** (or another MCP client)
 
@@ -198,13 +198,13 @@ Ask codex to create a React component that handles file uploads
 
 **Paging**
 
-1) First call:
+1. First call:
 
 ```json
 { "tool": "codex", "prompt": "...", "pageSize": 10000 }
 ```
 
-2) Next page:
+2. Next page:
 
 ```json
 { "tool": "codex", "pageToken": "<nextPageToken>" }

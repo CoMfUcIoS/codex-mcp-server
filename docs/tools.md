@@ -60,7 +60,16 @@ Return a machine‑readable list of all tools with input schemas and description
 **Example output (abridged):**
 
 ```json
-[ { "name": "codex", "description": "...", "inputSchema": { "type": "object", "properties": { "prompt": { "type": "string" } } } } ]
+[
+  {
+    "name": "codex",
+    "description": "...",
+    "inputSchema": {
+      "type": "object",
+      "properties": { "prompt": { "type": "string" } }
+    }
+  }
+]
 ```
 
 ---
@@ -138,4 +147,3 @@ All tools use a consistent error shape. Validation issues, CLI errors, and sessi
   "content": [{ "type": "text", "text": "..." }]
 }
 ```
-

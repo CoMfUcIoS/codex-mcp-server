@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.0.1
+
 - Initial public release (comfucios fork)
 - Added tools: `listModels`, `deleteSession`, `sessionStats`, `listTools`
 - Pagination with expiring `nextPageToken` (~10 min)

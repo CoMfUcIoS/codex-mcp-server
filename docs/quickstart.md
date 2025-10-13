@@ -10,11 +10,13 @@ codex login               # or export OPENAI_API_KEY=...
 ## 2) Add the server
 
 === "Claude Code"
+
 ```bash
 claude mcp add codex-cli -- npx -y @comfucios/codex-mcp-server
 ```
 
 === "Claude Desktop (macOS)"
+
 ```json
 {
   "mcpServers": {
