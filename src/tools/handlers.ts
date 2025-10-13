@@ -196,7 +196,9 @@ export class CodexToolHandler {
       }
 
       if (image) {
-        const images = Array.isArray(image) ? image.filter((img) => !!img) : [image].filter((img) => !!img);
+        const images = Array.isArray(image)
+          ? image.filter((img) => !!img)
+          : [image].filter((img) => !!img);
         if (images.length > 0) {
           cliArgs.push('--image', images.join(','));
         }
