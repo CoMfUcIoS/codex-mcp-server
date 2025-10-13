@@ -51,7 +51,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "packageManager": "npm@10",
+  "packageManager": "npm@10.2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
     "chalk": "^5.6.0",
