@@ -237,3 +237,10 @@ npm test
 ---
 
 See [`docs/tools.md`](docs/tools.md), [`docs/usage.md`](docs/usage.md), and [`docs/configuration.md`](docs/configuration.md) for details.
+
+---
+
+## Support
+
+If codex-mcp-server saves you time, consider supporting development: [Buy Me a Coffee](https://buymeacoffee.com/comfucios).
+
